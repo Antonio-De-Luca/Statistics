@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>secp256k1 Public Key Demo</title>
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 850px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #101827;
+      color: #e5e7eb;
+    }
+
+    h1 { color: #7dd3fc; }
+
+    .panel {
+      background: #1e293b;
+      padding: 20px;
+      margin: 16px 0;
+      border-radius: 12px;
+    }
+
+    label { display: block; margin-bottom: 8px; }
+
+    input {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #a7f3d0;
+      font-family: monospace;
+      font-size: 14px;
+    }
+
+    button {
+      margin-top: 12px;
+      padding: 10px 18px;
+      background: #0284c7;
+      color: white;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #0369a1; }
+
+    .value {
+      overflow-wrap: anywhere;
+      font: 13px/1.7 monospace;
+      color: #a7f3d0;
+    }
+
+    .label {
+      color: #93c5fd;
+      font-weight: 600;
+    }
+
+    .error { color: #fca5a5; }
+
+    .point-row {
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 8px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  overflow-wrap: anywhere;
+}
+
+.point-row.toy-public-key {
+  background: #064e3b;
+  border: 2px solid #34d399;
+  color: #d1fae5;
+}
+
+.point-title {
+  font-weight: 700;
+  color: #7dd3fc;
+  margin-bottom: 6px;
+}
+
+.toy-public-key .point-title {
+  color: #6ee7b7;
+}
+  </style>
+</head>
+
+<body>
+  <h1>Elliptic-Curve Public Key Generation</h1>
+
+  <p>
+    Ethereum uses secp256k1 to derive a public key from
+    a private key using Q = dG.
+  </p>
+
+  <div class="panel">
+    <label for="privateKey">
+      Private key (hexadecimal, without 0x)
+    </label>
+
+    <input
+      id="privateKey"
+      type="text"
+      value="2"
+      spellcheck="false"
+      autocomplete="off"
+    />
+
+    <button id="generate">Generate public key</button>
+    <p id="error" class="error"></p>
+  </div>
+
+  <div class="panel">
+    <div class="label">1. Curve</div>
+    <p>y² = x³ + 7 (mod p)</p>
+    <div class="value" id="prime"></div>
+  </div>
+
+  <div class="panel">
+    <div class="label">2. Generator point G</div>
+    <p class="value" id="generator"></p>
+  </div>
+
+  <div class="panel">
+    <div class="label">3. Private scalar d</div>
+    <p class="value" id="scalar"></p>
+
+    <div class="label">4. Public key Q = dG</div>
+    <p><strong>Public key X coordinate</strong></p>
+    <div class="value" id="pubX"></div>
+
+    <p><strong>Public key Y coordinate</strong></p>
+    <div class="value" id="pubY"></div>
+
+    <p><strong>Uncompressed public key (04 || X || Y)</strong></p>
+    <div class="value" id="pubKey"></div>
+  </div>
+
+  <div class="panel">
+    <div class="label">5. Scalar multiplication</div>
+    <p id="explanation"></p>
+    <div class="value" id="steps"></div>
+  </div>
+
+  <div class="panel">
+  <div class="label">5. Toy public key: G, 2G, 3G, ..., kG</div>
+
+  <label for="toyK">Choose a small k (1–100)</label>
+  <input
+    id="toyK"
+    type="number"
+    min="1"
+    max="100"
+    value="5"
+  />
+
+  <button id="showMultiples">Compute multiples</button>
+
+  <p>
+    Each row is another elliptic-curve point.
+    The highlighted point kG is the toy public key.
+  </p>
+
+  <div id="multiples" class="value"></div>
+</div>
+
+<div class="panel">
+  <div class="label">6. Statistical Properties of Scalar Multiplication</div>
+
+  <p>
+    Analyze the points G, 2G, ..., kG generated above.
+    These statistics are exploratory, not cryptographic security tests.
+  </p>
+
+  <button id="analyzePoints">Analyze points</button>
+
+  <div id="statistics" class="value" style="margin-top: 16px;">
+    Click "Analyze points" to calculate statistics.
+  </div>
+
+  <div class="label" style="margin-top: 20px;">
+    Interpretation and cryptographic relevance
+  </div>
+
+  <div style="line-height: 1.7;">
+    <p><strong>Coordinate distribution:</strong>
+      The x and y coordinates are field elements modulo p.
+      Their values are constrained by the curve equation; they are not
+      independent random numbers.
+    </p>
+
+    <p><strong>Value frequencies:</strong>
+      Repeated coordinates can be counted in a sample. A lack of
+      repetitions in a small sample does not establish uniformity.
+    </p>
+
+    <p><strong>Bit distribution:</strong>
+      Counting zeroes and ones is a useful descriptive statistic.
+      Balanced bit counts alone do not demonstrate unpredictability.
+    </p>
+
+    <p><strong>Apparent uniformity:</strong>
+      A cryptographic public-key mapping should not reveal an obvious,
+      exploitable pattern in its outputs. However, uniform-looking
+      samples are insufficient to establish security.
+    </p>
+
+    <p><strong>Input-output correlation:</strong>
+      Simple correlations can reveal some patterns, but a low linear
+      correlation does not prove that recovering the private scalar
+      is computationally infeasible.
+    </p>
+
+    <p><strong>Avalanche-like behaviour:</strong>
+      A large change in output bits for a small input change is a
+      familiar hash-function design goal. Scalar multiplication is
+      not required to satisfy the strict hash avalanche criterion.
+    </p>
+  </div>
+</div>
+
+  <script>
+    // secp256k1 parameters
+    const p = (1n << 256n) - (1n << 32n) - 977n;
+
+    const n = BigInt(
+      "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE" +
+      "BAAEDCE6AF48A03BBFD25E8CD0364141"
+    );
+
+    const G = {
+      x: BigInt(
+        "0x79BE667EF9DCBBAC55A06295CE870B07" +
+        "029BFCDB2DCE28D959F2815B16F81798"
+      ),
+      y: BigInt(
+        "0x483ADA7726A3C4655DA4FBFC0E1108A8" +
+        "FD17B448A68554199C47D08FFB10D4B8"
+      )
+    };
+
+    // Point at infinity is represented by null.
+
+    function mod(a, m = p) {
+      return ((a % m) + m) % m;
+    }
+
+    // Modular exponentiation by repeated squaring.
+    function modPow(base, exp, m) {
+      let result = 1n;
+      base = mod(base, m);
+
+      while (exp > 0n) {
+        if (exp & 1n) result = result * base % m;
+        base = base * base % m;
+        exp >>= 1n;
+      }
+
+      return result;
+    }
+
+    // Since p is prime, a^(-1) = a^(p-2) mod p.
+    function inv(a) {
+      if (mod(a) === 0n) {
+        throw new Error("Cannot invert zero");
+      }
+      return modPow(a, p - 2n, p);
+    }
+
+    // Elliptic-curve point addition.
+    function pointAdd(P, Q) {
+      if (P === null) return Q;
+      if (Q === null) return P;
+
+      let slope;
+
+      if (P.x === Q.x) {
+        // P + (-P) = point at infinity.
+        if (mod(P.y + Q.y) === 0n) return null;
+
+        // Point doubling:
+        // slope = 3*x^2 / (2*y) mod p
+        slope = mod(3n * P.x * P.x * inv(2n * P.y));
+      } else {
+        // Distinct points:
+        // slope = (y2-y1) / (x2-x1) mod p
+        slope = mod((Q.y - P.y) * inv(Q.x - P.x));
+      }
+
+      const x3 = mod(slope * slope - P.x - Q.x);
+      const y3 = mod(slope * (P.x - x3) - P.y);
+
+      return { x: x3, y: y3 };
+    }
+
+    // Double-and-add computes Q = dG in O(log d) additions.
+    function scalarMultiply(d, point) {
+      let result = null;
+      let current = point;
+      let k = d;
+      const trace = [];
+
+      while (k > 0n) {
+        if (k & 1n) {
+          result = pointAdd(result, current);
+          trace.push("Set bit: result = result + current");
+        }
+
+        k >>= 1n;
+
+        if (k > 0n) {
+          current = pointAdd(current, current);
+          trace.push("Double current: current = 2 * current");
+        }
+      }
+
+      return { point: result, trace };
+    }
+
+    function hex(value) {
+      return value.toString(16).padStart(64, "0");
+    }
+
+    function generate() {
+      const error = document.getElementById("error");
+      error.textContent = "";
+
+      try {
+        const input = document
+          .getElementById("privateKey").value.trim()
+          .replace(/^0x/i, "");
+
+        if (!/^[0-9a-fA-F]{1,64}$/.test(input)) {
+          throw new Error("Enter 1–64 hexadecimal characters.");
+        }
+
+        const d = BigInt("0x" + input);
+
+        if (d < 1n || d >= n) {
+          throw new Error("Private key must satisfy 1 ≤ d < n.");
+        }
+
+        const { point: Q, trace } = scalarMultiply(d, G);
+
+        document.getElementById("prime").textContent =
+          "p = 0x" + p.toString(16);
+
+        document.getElementById("generator").textContent =
+          "Gx = " + hex(G.x) + "\nGy = " + hex(G.y);
+
+        document.getElementById("scalar").textContent =
+          "d = 0x" + hex(d);
+
+        document.getElementById("pubX").textContent = hex(Q.x);
+        document.getElementById("pubY").textContent = hex(Q.y);
+
+        document.getElementById("pubKey").textContent =
+          "04" + hex(Q.x) + hex(Q.y);
+
+        document.getElementById("explanation").textContent =
+          "Computed dG using double-and-add. " +
+          "The loop processes the private scalar one bit at a time.";
+
+        document.getElementById("steps").textContent =
+          "Private scalar bits: " + d.toString(2).length +
+          "\nPoint operations recorded: " + trace.length +
+          "\n\n" + trace.join("\n");
+
+      } catch (e) {
+        error.textContent = e.message;
+      }
+    }
+
+    document.getElementById("generate")
+      .addEventListener("click", generate);
+
+    generate();
+
+    function showMultiples() {
+  const output = document.getElementById("multiples");
+  const kInput = document.getElementById("toyK");
+  const k = Number(kInput.value);
+
+  output.replaceChildren();
+
+  if (!Number.isInteger(k) || k < 1 || k > 100) {
+    output.textContent = "Please enter an integer from 1 to 100.";
+    return;
+  }
+
+  let point = null;
+
+  for (let i = 1; i <= k; i++) {
+    point = pointAdd(point, G);
+
+    const row = document.createElement("div");
+    row.className = "point-row" +
+      (i === k ? " toy-public-key" : "");
+
+    const title = document.createElement("div");
+    title.className = "point-title";
+    title.textContent = i === k
+      ? `kG = ${i}G — TOY PUBLIC KEY`
+      : `${i}G`;
+
+    const coordinates = document.createElement("div");
+    coordinates.textContent =
+      "X = " + hex(point.x) + "\n" +
+      "Y = " + hex(point.y);
+    coordinates.style.whiteSpace = "pre-wrap";
+
+    row.append(title, coordinates);
+    output.appendChild(row);
+  }
+}
+
+document.getElementById("showMultiples")
+  .addEventListener("click", showMultiples);
+
+showMultiples();
+
+function analyzePoints() {
+  const output = document.getElementById("statistics");
+  const k = Number(document.getElementById("toyK").value);
+
+  output.replaceChildren();
+
+  if (!Number.isInteger(k) || k < 1 || k > 100) {
+    output.textContent = "Choose an integer k between 1 and 100.";
+    return;
+  }
+
+  // Generate G, 2G, ..., kG.
+  const points = [];
+  let point = null;
+
+  for (let i = 1; i <= k; i++) {
+    point = pointAdd(point, G);
+    points.push({ i, x: point.x, y: point.y });
+  }
+
+  const xs = points.map(q => hex(q.x));
+  const ys = points.map(q => hex(q.y));
+
+  // Count coordinate values and repetitions.
+  function frequency(values) {
+    const counts = new Map();
+    for (const value of values) {
+      counts.set(value, (counts.get(value) || 0) + 1);
+    }
+
+    let repeatedValues = 0;
+    let excessOccurrences = 0;
+
+    for (const count of counts.values()) {
+      if (count > 1) {
+        repeatedValues++;
+        excessOccurrences += count - 1;
+      }
+    }
+
+    return {
+      unique: counts.size,
+      repeatedValues,
+      excessOccurrences
+    };
+  }
+
+  // Count set bits in 256-bit coordinate encodings.
+  function bitStats(values) {
+    let ones = 0;
+
+    for (const value of values) {
+      for (const digit of value) {
+        ones += Number(
+          BigInt("0x" + digit)
+            .toString(2)
+            .split("1").length - 1
+        );
+      }
+    }
+
+    const total = values.length * 256;
+    return {
+      ones,
+      zeroes: total - ones,
+      total,
+      percentage: 100 * ones / total
+    };
+  }
+
+  // Approximate Pearson correlation. Coordinates are reduced to
+  // their leading 13 hex digits to fit safely in JavaScript Numbers.
+  function correlation(values) {
+    const input = points.map(q => q.i);
+    const nums = values.map(v => Number("0x" + v.slice(0, 13)));
+
+    const mean = a => a.reduce((s, v) => s + v, 0) / a.length;
+    const mx = mean(input);
+    const my = mean(nums);
+
+    let numerator = 0;
+    let dx2 = 0;
+    let dy2 = 0;
+
+    for (let j = 0; j < input.length; j++) {
+      const dx = input[j] - mx;
+      const dy = nums[j] - my;
+      numerator += dx * dy;
+      dx2 += dx * dx;
+      dy2 += dy * dy;
+    }
+
+    if (dx2 === 0 || dy2 === 0) return null;
+    return numerator / Math.sqrt(dx2 * dy2);
+  }
+
+  // Hamming distance between two 512-bit X||Y encodings.
+  function hamming(a, b) {
+    let distance = 0;
+
+    for (let j = 0; j < a.length; j++) {
+      let v = parseInt(a[j], 16) ^ parseInt(b[j], 16);
+
+      while (v !== 0) {
+        distance += v & 1;
+        v >>= 1;
+      }
+    }
+
+    return distance;
+  }
+
+  const fx = frequency(xs);
+  const fy = frequency(ys);
+  const bx = bitStats(xs);
+  const by = bitStats(ys);
+
+  const distances = [];
+
+  for (let i = 1; i < points.length; i++) {
+    const before = xs[i - 1] + ys[i - 1];
+    const after = xs[i] + ys[i];
+    distances.push(hamming(before, after));
+  }
+
+  const averageDistance = distances.length
+    ? distances.reduce((s, v) => s + v, 0) / distances.length
+    : null;
+
+  const rows = [
+    ["Points analyzed", k],
+    ["Unique X coordinates", `${fx.unique} / ${k}`],
+    ["Repeated X values", fx.repeatedValues],
+    ["Unique Y coordinates", `${fy.unique} / ${k}`],
+    ["Repeated Y values", fy.repeatedValues],
+    ["X-coordinate bits: ones", `${bx.ones} / ${bx.total} (${bx.percentage.toFixed(2)}%)`],
+    ["X-coordinate bits: zeroes", bx.zeroes],
+    ["Y-coordinate bits: ones", `${by.ones} / ${by.total} (${by.percentage.toFixed(2)}%)`],
+    ["Y-coordinate bits: zeroes", by.zeroes],
+    ["Correlation: scalar i vs X", formatCorrelation(correlation(xs))],
+    ["Correlation: scalar i vs Y", formatCorrelation(correlation(ys))],
+    ["Mean bit changes between consecutive points", averageDistance === null
+      ? "N/A (only one point)"
+      : `${averageDistance.toFixed(2)} / 512`],
+    ["Minimum bit changes", distances.length ? Math.min(...distances) : "N/A"],
+    ["Maximum bit changes", distances.length ? Math.max(...distances) : "N/A"]
+  ];
+
+  for (const [label, value] of rows) {
+    const row = document.createElement("p");
+    const strong = document.createElement("strong");
+    strong.textContent = label + ": ";
+    row.append(strong, document.createTextNode(String(value)));
+    output.appendChild(row);
+  }
+
+  const note = document.createElement("p");
+  note.style.color = "#fcd34d";
+  note.textContent =
+    "Caution: this is a tiny, structured sample of consecutive multiples " +
+    "of G, not a sample of independent random public keys. The correlation " +
+    "uses truncated coordinates. None of these measurements establishes " +
+    "or disproves cryptographic security.";
+  output.appendChild(note);
+}
+
+function formatCorrelation(value) {
+  return value === null ? "Undefined" : value.toFixed(4);
+}
+
+document.getElementById("analyzePoints")
+  .addEventListener("click", analyzePoints);
+  </script>
+</body>
+</html>

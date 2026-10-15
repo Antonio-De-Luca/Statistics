@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta
+    name="description"
+    content="An educational explanation of the cryptographic pipeline from a BIP-39 mnemonic to an EIP-55 Ethereum address."
+  >
+  <title>From Wallet Seed to Ethereum Address</title>
+
+  <style>
+    :root {
+      --bg: #07111f;
+      --surface: #0d1b2d;
+      --surface-2: #12243a;
+      --surface-3: #172c45;
+      --text: #eef5ff;
+      --muted: #a6b5c8;
+      --line: #29415d;
+      --cyan: #42d7e8;
+      --purple: #9f7aea;
+      --green: #58d68d;
+      --amber: #f5b942;
+      --red: #ff7b7b;
+      --max-width: 1180px;
+      --radius: 20px;
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 0%, rgba(66, 215, 232, 0.1), transparent 31rem),
+        radial-gradient(circle at 90% 25%, rgba(159, 122, 234, 0.12), transparent 33rem),
+        var(--bg);
+      font-family:
+        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      line-height: 1.65;
+    }
+
+    a {
+      color: var(--cyan);
+    }
+
+    code {
+      color: #d8e9ff;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .container {
+      width: min(calc(100% - 2rem), var(--max-width));
+      margin-inline: auto;
+    }
+
+    .skip-link {
+      position: fixed;
+      top: 0.5rem;
+      left: 0.5rem;
+      z-index: 100;
+      padding: 0.7rem 1rem;
+      color: var(--bg);
+      background: var(--cyan);
+      border-radius: 8px;
+      transform: translateY(-150%);
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid rgba(41, 65, 93, 0.85);
+      background: rgba(7, 17, 31, 0.86);
+      backdrop-filter: blur(18px);
+    }
+
+    .nav {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 850;
+      letter-spacing: -0.025em;
+    }
+
+    .brand span {
+      color: var(--cyan);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.15rem;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      font-size: 0.92rem;
+      text-decoration: none;
+    }
+
+    .nav-links a:hover,
+    .nav-links a:focus-visible {
+      color: var(--text);
+    }
+
+    .hero {
+      padding: 6.5rem 0 4.5rem;
+      text-align: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 0.35rem 0.75rem;
+      margin: 0 0 1.25rem;
+      color: var(--cyan);
+      background: rgba(66, 215, 232, 0.08);
+      border: 1px solid rgba(66, 215, 232, 0.25);
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3 {
+      line-height: 1.16;
+      letter-spacing: -0.03em;
+    }
+
+    h1 {
+      max-width: 900px;
+      margin: 0 auto;
+      font-size: clamp(2.6rem, 7vw, 5.6rem);
+    }
+
+    h1 span {
+      color: var(--cyan);
+    }
+
+    .lead {
+      max-width: 760px;
+      margin: 1.5rem auto 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.22rem);
+    }
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      margin-top: 2rem;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0.7rem 1rem;
+      color: #05131c;
+      background: var(--cyan);
+      border: 1px solid var(--cyan);
+      border-radius: 12px;
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .button:hover {
+      filter: brightness(1.08);
+    }
+
+    .button.secondary {
+      color: var(--text);
+      background: transparent;
+      border-color: var(--line);
+    }
+
+    main section {
+      padding: 4.5rem 0;
+    }
+
+    .section-heading {
+      max-width: 760px;
+      margin-bottom: 2rem;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.3rem);
+    }
+
+    .section-heading p {
+      margin-bottom: 0;
+      color: var(--muted);
+    }
+
+    .notice {
+      padding: 1rem 1.1rem;
+      margin-top: 1.4rem;
+      color: #ffe8b1;
+      background: rgba(245, 185, 66, 0.08);
+      border: 1px solid rgba(245, 185, 66, 0.35);
+      border-radius: 14px;
+    }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 230px;
+      padding: 1.1rem;
+      background: linear-gradient(145deg, var(--surface-2), var(--surface));
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .stage:not(:last-child)::after {
+      content: ">";
+      position: absolute;
+      top: 50%;
+      right: -0.68rem;
+      z-index: 2;
+      color: var(--cyan);
+      font-weight: 900;
+      transform: translateY(-50%);
+    }
+
+    .stage-number {
+      display: inline-grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      color: var(--bg);
+      background: var(--cyan);
+      border-radius: 50%;
+      font-size: 0.8rem;
+      font-weight: 900;
+    }
+
+    .stage h3 {
+      margin: 0.9rem 0 0.45rem;
+      font-size: 1.05rem;
+    }
+
+    .stage .standard {
+      color: var(--purple);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .stage p {
+      margin: 0.7rem 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .card {
+      padding: 1.35rem;
+      background: rgba(13, 27, 45, 0.9);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .card h3 {
+      margin: 0 0 0.65rem;
+      font-size: 1.2rem;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 0.18rem 0.5rem;
+      margin-bottom: 0.8rem;
+      color: var(--cyan);
+      background: rgba(66, 215, 232, 0.08);
+      border: 1px solid rgba(66, 215, 232, 0.22);
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 850;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .card p,
+    .card li {
+      color: var(--muted);
+    }
+
+    .card ul {
+      padding-left: 1.2rem;
+      margin-bottom: 0;
+    }
+
+    .formula {
+      padding: 0.8rem;
+      margin-top: 1rem;
+      overflow-wrap: anywhere;
+      color: #d9eeff;
+      background: #071421;
+      border: 1px solid #203a55;
+      border-radius: 10px;
+      font-size: 0.84rem;
+    }
+
+    .distinctions {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.75rem;
+    }
+
+    .distinction {
+      padding: 1.15rem;
+      border-top: 3px solid var(--cyan);
+      background: var(--surface);
+      border-radius: 0 0 14px 14px;
+    }
+
+    .distinction:nth-child(2) {
+      border-color: var(--purple);
+    }
+
+    .distinction:nth-child(3) {
+      border-color: var(--green);
+    }
+
+    .distinction:nth-child(4) {
+      border-color: var(--amber);
+    }
+
+    .distinction:nth-child(5) {
+      border-color: var(--red);
+    }
+
+    .distinction h3 {
+      margin: 0 0 0.45rem;
+      font-size: 1rem;
+    }
+
+    .distinction p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .lab {
+      padding: 1.5rem;
+      background:
+        linear-gradient(145deg, rgba(18, 36, 58, 0.97), rgba(9, 22, 37, 0.97));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .lab-controls {
+      display: flex;
+      align-items: end;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .field {
+      flex: 1;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.4rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 750;
+    }
+
+    input {
+      width: 100%;
+      min-height: 46px;
+      padding: 0.7rem 0.85rem;
+      color: var(--text);
+      background: #071421;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    input:focus {
+      outline: 2px solid var(--cyan);
+      outline-offset: 2px;
+    }
+
+    .output-list {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .output {
+      display: grid;
+      grid-template-columns: 155px 1fr;
+      gap: 0.8rem;
+      padding: 0.85rem;
+      background: #081726;
+      border: 1px solid #203750;
+      border-radius: 10px;
+    }
+
+    .output strong {
+      color: var(--cyan);
+      font-size: 0.83rem;
+    }
+
+    .output code {
+      overflow-wrap: anywhere;
+      font-size: 0.82rem;
+    }
+
+    .lab-note {
+      margin: 1rem 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .stats-layout {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 1rem;
+    }
+
+    .stat-list {
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .stat {
+      display: grid;
+      grid-template-columns: 105px 1fr;
+      gap: 1rem;
+      align-items: center;
+      padding: 0.9rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .stat-value {
+      color: var(--cyan);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 1.15rem;
+      font-weight: 900;
+    }
+
+    .stat p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .timeline {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.75rem;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      top: 1.05rem;
+      right: 4%;
+      left: 4%;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .event {
+      position: relative;
+      padding-top: 2.4rem;
+    }
+
+    .event::before {
+      content: "";
+      position: absolute;
+      top: 0.66rem;
+      left: 0;
+      width: 14px;
+      height: 14px;
+      background: var(--cyan);
+      border: 4px solid var(--bg);
+      border-radius: 50%;
+    }
+
+    .event time {
+      color: var(--cyan);
+      font-weight: 900;
+    }
+
+    .event h3 {
+      margin: 0.25rem 0 0.45rem;
+      font-size: 1rem;
+    }
+
+    .event p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .comparison {
+      width: 100%;
+      overflow: hidden;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .comparison th,
+    .comparison td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .comparison th {
+      color: var(--cyan);
+      background: #10233a;
+    }
+
+    .comparison td {
+      color: var(--muted);
+    }
+
+    .comparison tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .callout {
+      padding: 1.4rem;
+      margin-top: 1rem;
+      background: rgba(159, 122, 234, 0.08);
+      border: 1px solid rgba(159, 122, 234, 0.35);
+      border-radius: var(--radius);
+    }
+
+    .callout h3 {
+      margin-top: 0;
+    }
+
+    .callout p:last-child {
+      margin-bottom: 0;
+    }
+
+    footer {
+      padding: 3rem 0;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+    }
+
+    .references {
+      columns: 2;
+      column-gap: 2rem;
+      padding-left: 1.2rem;
+    }
+
+    .references li {
+      margin-bottom: 0.65rem;
+      break-inside: avoid;
+    }
+
+    .footer-note {
+      margin-top: 2rem;
+      color: #7f91a8;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 1050px) {
+      .pipeline {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .stage:not(:last-child)::after {
+        content: none;
+      }
+
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .distinctions {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .timeline {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .timeline::before {
+        display: none;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hero {
+        padding-top: 4.5rem;
+      }
+
+      .pipeline,
+      .grid,
+      .distinctions,
+      .stats-layout,
+      .timeline {
+        grid-template-columns: 1fr;
+      }
+
+      .lab-controls {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .output {
+        grid-template-columns: 1fr;
+      }
+
+      .comparison {
+        display: block;
+        overflow-x: auto;
+      }
+
+      .references {
+        columns: 1;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <nav class="nav container" aria-label="Main navigation">
+      <a class="brand" href="#top">Wallet<span>Pipeline</span></a>
+
+      <div class="nav-links">
+        <a href="#pipeline">Pipeline</a>
+        <a href="#primitives">Primitives</a>
+        <a href="#statistics">Statistics</a>
+        <a href="#history">History</a>
+        <a href="#references">References</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="container">
+        <p class="eyebrow">Cryptography and wallet engineering</p>
+
+        <h1>
+          From Wallet Seed to
+          <span>Ethereum Address</span>
+        </h1>
+
+        <p class="lead">
+          A practical guide to mnemonic encoding, deterministic key derivation,
+          elliptic-curve public keys, hashing, hexadecimal encoding and
+          mixed-case checksums.
+        </p>
+
+        <div class="hero-actions">
+          <a class="button" href="#pipeline">Follow the pipeline</a>
+          <a class="button secondary" href="#history">View the timeline</a>
+        </div>
+
+        <div class="notice" role="note">
+          <strong>Security rule:</strong> never enter a real recovery phrase,
+          private key or wallet password into a homework page, unfamiliar
+          website, screenshot or chat.
+        </div>
+      </div>
+    </section>
+
+    <section id="pipeline">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">End-to-end model</p>
+          <h2>The simplified wallet pipeline</h2>
+          <p>
+            Wallets combine several standards because no single algorithm
+            performs secure backup, hierarchical organization, public-key
+            operations, hashing and typo detection equally well.
+          </p>
+        </div>
+
+        <div class="pipeline" aria-label="Ethereum wallet derivation pipeline">
+          <article class="stage">
+            <span class="stage-number">1</span>
+            <h3>Mnemonic</h3>
+            <span class="standard">BIP-39</span>
+            <p>
+              Encodes entropy and a small checksum as a human-readable sequence
+              of words.
+            </p>
+          </article>
+
+          <article class="stage">
+            <span class="stage-number">2</span>
+            <h3>Seed</h3>
+            <span class="standard">PBKDF2-HMAC-SHA512</span>
+            <p>
+              Converts the normalized mnemonic and optional passphrase into a
+              deterministic 512-bit seed.
+            </p>
+          </article>
+
+          <article class="stage">
+            <span class="stage-number">3</span>
+            <h3>Private key</h3>
+            <span class="standard">BIP-32 / BIP-44</span>
+            <p>
+              Derives a tree of extended keys and selects an Ethereum account
+              through a standard path.
+            </p>
+          </article>
+
+          <article class="stage">
+            <span class="stage-number">4</span>
+            <h3>Public key</h3>
+            <span class="standard">secp256k1</span>
+            <p>
+              Computes a public curve point from the private scalar using
+              one-way scalar multiplication.
+            </p>
+          </article>
+
+          <article class="stage">
+            <span class="stage-number">5</span>
+            <h3>Hash</h3>
+            <span class="standard">Keccak-256</span>
+            <p>
+              Hashes the uncompressed public-key coordinates to a 256-bit
+              digest.
+            </p>
+          </article>
+
+          <article class="stage">
+            <span class="stage-number">6</span>
+            <h3>Address</h3>
+            <span class="standard">Last 20 bytes</span>
+            <p>
+              Keeps the rightmost 160 bits and represents them as 40 hexadecimal
+              characters with a <code>0x</code> prefix.
+            </p>
+          </article>
+
+          <article class="stage">
+            <span class="stage-number">7</span>
+            <h3>Checksum case</h3>
+            <span class="standard">EIP-55</span>
+            <p>
+              Uses letter capitalization to add error detection without
+              changing the underlying 20-byte address.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="primitives">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">Roles and purposes</p>
+          <h2>Six standards and primitives</h2>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <span class="tag">Mnemonic encoding + seed generation</span>
+            <h3>BIP-39</h3>
+            <p>
+              BIP-39 first maps cryptographically random entropy plus checksum
+              bits into words selected from a 2048-word list. It then derives a
+              64-byte seed using PBKDF2-HMAC-SHA512 with 2048 iterations.
+            </p>
+            <div class="formula">
+              seed = PBKDF2-HMAC-SHA512(mnemonic, "mnemonic" + passphrase, 2048)
+            </div>
+          </article>
+
+          <article class="card">
+            <span class="tag">Hierarchical key derivation</span>
+            <h3>BIP-32</h3>
+            <p>
+              BIP-32 turns a seed into a master private key and chain code, then
+              deterministically derives child extended keys. A single backup
+              can reproduce many accounts and addresses.
+            </p>
+            <ul>
+              <li>Hardened derivation protects parent relationships.</li>
+              <li>Non-hardened derivation supports public child derivation.</li>
+              <li>The chain code is derivation metadata, not an address.</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <span class="tag">Path organization</span>
+            <h3>BIP-44</h3>
+            <p>
+              BIP-44 assigns meaning to levels in the BIP-32 tree. A commonly
+              used Ethereum path is:
+            </p>
+            <div class="formula">m / 44' / 60' / 0' / 0 / 0</div>
+            <p>
+              The fields represent purpose, coin type, account, change and
+              address index. The apostrophe marks hardened derivation.
+            </p>
+          </article>
+
+          <article class="card">
+            <span class="tag">Public-key cryptography</span>
+            <h3>secp256k1</h3>
+            <p>
+              The private key is a scalar in the curve's valid range. The public
+              key is the point obtained by multiplying the curve's generator
+              point by that scalar.
+            </p>
+            <div class="formula">Q = d x G</div>
+            <p>
+              Computing <code>Q</code> from <code>d</code> is efficient.
+              Recovering <code>d</code> from <code>Q</code> is intended to be
+              computationally infeasible. Ethereum also uses this key
+              relationship for ECDSA signatures.
+            </p>
+          </article>
+
+          <article class="card">
+            <span class="tag">Cryptographic hashing</span>
+            <h3>Keccak-256</h3>
+            <p>
+              Ethereum hashes the 64-byte uncompressed public-key coordinates,
+              excluding the <code>0x04</code> serialization prefix when that
+              prefix is present.
+            </p>
+            <div class="formula">
+              address = rightmost_20_bytes(Keccak-256(public_key[1:]))
+            </div>
+            <p>
+              Hashing compresses the public key and produces a fixed-size,
+              avalanche-sensitive identifier.
+            </p>
+          </article>
+
+          <article class="card">
+            <span class="tag">Checksum encoding</span>
+            <h3>EIP-55</h3>
+            <p>
+              EIP-55 hashes the lowercase hexadecimal address and uses selected
+              hash bits to decide whether each alphabetic address character is
+              uppercase or lowercase.
+            </p>
+            <p>
+              Capitalization changes the textual representation, not the
+              underlying 160-bit address. It detects many accidental typing
+              errors but is not authentication or encryption.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="distinction-title">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">Do not conflate these operations</p>
+          <h2 id="distinction-title">Five different concepts</h2>
+        </div>
+
+        <div class="distinctions">
+          <article class="distinction">
+            <h3>Key generation</h3>
+            <p>
+              Creates new secret material from high-quality randomness. In
+              BIP-39, initial entropy is generated before being encoded as
+              words.
+            </p>
+          </article>
+
+          <article class="distinction">
+            <h3>Key derivation</h3>
+            <p>
+              Deterministically computes keys from an existing seed or parent
+              key. The same input and path reproduce the same child key.
+            </p>
+          </article>
+
+          <article class="distinction">
+            <h3>Public-key cryptography</h3>
+            <p>
+              Establishes a mathematically linked private/public key pair and
+              enables digital signatures without revealing the private key.
+            </p>
+          </article>
+
+          <article class="distinction">
+            <h3>Hashing</h3>
+            <p>
+              Maps arbitrary input to a fixed-size digest. It is one-way,
+              deterministic and designed to resist collisions and preimages.
+            </p>
+          </article>
+
+          <article class="distinction">
+            <h3>Checksum and encoding</h3>
+            <p>
+              Encoding changes representation. A checksum adds limited error
+              detection. Neither supplies secrecy or proves ownership.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="lab">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">Safe interactive model</p>
+          <h2>Derive another address index</h2>
+          <p>
+            This demonstration changes only the final index of a standard
+            Ethereum-style path. Its values are deterministic educational
+            placeholders, not usable wallet credentials.
+          </p>
+        </div>
+
+        <div class="lab">
+          <div class="lab-controls">
+            <div class="field">
+              <label for="index">Address index</label>
+              <input
+                id="index"
+                type="number"
+                min="0"
+                max="9999"
+                value="0"
+                inputmode="numeric"
+              >
+            </div>
+
+            <button class="button" id="derive" type="button">
+              Update demonstration
+            </button>
+          </div>
+
+          <div class="output-list" aria-live="polite">
+            <div class="output">
+              <strong>Derivation path</strong>
+              <code id="path-output">m/44'/60'/0'/0/0</code>
+            </div>
+
+            <div class="output">
+              <strong>Mock private-key ID</strong>
+              <code id="private-output">Not a real private key</code>
+            </div>
+
+            <div class="output">
+              <strong>Mock public-key ID</strong>
+              <code id="public-output">Not a real public key</code>
+            </div>
+
+            <div class="output">
+              <strong>Mock address</strong>
+              <code id="address-output">0x0000000000000000000000000000000000000000</code>
+            </div>
+          </div>
+
+          <p class="lab-note">
+            The identifiers are generated locally from the selected index for
+            visualization only. This page intentionally does not accept a seed
+            phrase and does not implement production wallet cryptography.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="statistics">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">Statistical properties</p>
+          <h2>What security claims mean numerically</h2>
+          <p>
+            Cryptographic outputs are designed to appear statistically uniform,
+            but their effective security depends on output size, attack model
+            and the entropy of the original secret.
+          </p>
+        </div>
+
+        <div class="stats-layout">
+          <div class="stat-list">
+            <article class="stat">
+              <div class="stat-value">128 bits</div>
+              <p>
+                Common entropy for a 12-word BIP-39 mnemonic. Four checksum bits
+                produce 132 total bits, split into twelve 11-bit word indices.
+              </p>
+            </article>
+
+            <article class="stat">
+              <div class="stat-value">256 bits</div>
+              <p>
+                Common entropy for a 24-word mnemonic. Eight checksum bits
+                produce 264 total bits, split into twenty-four word indices.
+              </p>
+            </article>
+
+            <article class="stat">
+              <div class="stat-value">256 bits</div>
+              <p>
+                Keccak-256 digest length. An ideal 256-bit hash offers about
+                256-bit preimage resistance and 128-bit generic collision
+                resistance.
+              </p>
+            </article>
+
+            <article class="stat">
+              <div class="stat-value">160 bits</div>
+              <p>
+                Ethereum externally owned account address length after
+                truncating the public-key hash to 20 bytes.
+              </p>
+            </article>
+          </div>
+
+          <article class="card">
+            <span class="tag">Uniformity and probability</span>
+            <h3>Expected behavior</h3>
+            <ul>
+              <li>
+                Securely generated private keys are approximately uniform over
+                the valid secp256k1 scalar range.
+              </li>
+              <li>
+                A one-bit input change should unpredictably alter about half of
+                a cryptographic hash's output bits on average.
+              </li>
+              <li>
+                For an ideal 160-bit address space, a targeted preimage search
+                requires roughly <code>2^160</code> trials.
+              </li>
+              <li>
+                Generic collisions become plausible around
+                <code>2^80</code> samples because of the birthday bound.
+              </li>
+              <li>
+                Truncation from 256 to 160 bits reduces address-level collision
+                security but does not expose the private key.
+              </li>
+            </ul>
+
+            <div class="callout">
+              <h3>Entropy is the foundation</h3>
+              <p>
+                A formally correct pipeline cannot repair weak randomness.
+                Human-chosen words are not a safe substitute for wallet-generated
+                entropy. A BIP-39 passphrase also creates a different valid
+                wallet, so losing or mistyping it changes every derived key.
+              </p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="history">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">Temporal context</p>
+          <h2>A short cryptographic timeline</h2>
+        </div>
+
+        <div class="timeline">
+          <article class="event">
+            <time datetime="1977">1977</time>
+            <h3>RSA</h3>
+            <p>
+              RSA demonstrates practical public-key encryption and digital
+              signatures using integer factorization.
+            </p>
+          </article>
+
+          <article class="event">
+            <time datetime="2001">2001</time>
+            <h3>SHA-2</h3>
+            <p>
+              The SHA-2 family, including SHA-512, is standardized. SHA-512
+              later becomes part of BIP-39 and BIP-32 constructions.
+            </p>
+          </article>
+
+          <article class="event">
+            <time datetime="2012">2012</time>
+            <h3>BIP-32</h3>
+            <p>
+              Hierarchical deterministic wallets organize many keys under one
+              master seed and chain code.
+            </p>
+          </article>
+
+          <article class="event">
+            <time datetime="2013">2013</time>
+            <h3>BIP-39</h3>
+            <p>
+              Mnemonic sentences provide a human-manageable encoding and a
+              deterministic seed-generation procedure.
+            </p>
+          </article>
+
+          <article class="event">
+            <time datetime="2014">2014</time>
+            <h3>BIP-44</h3>
+            <p>
+              A multi-account path structure gives BIP-32 trees standardized
+              purpose, coin and account levels.
+            </p>
+          </article>
+
+          <article class="event">
+            <time datetime="2015">2015</time>
+            <h3>SHA-3</h3>
+            <p>
+              NIST publishes FIPS 202, standardizing functions based on the
+              Keccak design.
+            </p>
+          </article>
+
+          <article class="event">
+            <time datetime="2016">2016</time>
+            <h3>EIP-55</h3>
+            <p>
+              Ethereum gains an optional mixed-case checksum representation for
+              hexadecimal addresses.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="hash-comparison">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">Important distinction</p>
+          <h2>SHA-512, Keccak-256 and SHA3-256</h2>
+        </div>
+
+        <table class="comparison">
+          <thead>
+            <tr>
+              <th scope="col">Function</th>
+              <th scope="col">Family and role</th>
+              <th scope="col">Wallet relevance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>SHA-512</strong></td>
+              <td>
+                A 512-bit member of the SHA-2 family, standardized before
+                SHA-3.
+              </td>
+              <td>
+                Used inside HMAC and PBKDF2 by BIP-32 and BIP-39. It is not the
+                hash used to form an Ethereum address from a public key.
+              </td>
+            </tr>
+
+            <tr>
+              <td><strong>Keccak-256</strong></td>
+              <td>
+                A 256-bit function based on the Keccak design as used before
+                final SHA-3 standardization.
+              </td>
+              <td>
+                Used by Ethereum for public-key-to-address derivation and many
+                protocol-level hashing operations.
+              </td>
+            </tr>
+
+            <tr>
+              <td><strong>SHA3-256</strong></td>
+              <td>
+                The standardized FIPS 202 SHA-3 function, also based on Keccak.
+              </td>
+              <td>
+                It is not interchangeable with Ethereum's Keccak-256 because
+                the padding and domain-separation conventions differ.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout">
+          <h3>Why not one algorithm for everything?</h3>
+          <p>
+            These components solve different problems. BIP-39, BIP-32 and
+            BIP-44 manage deterministic secrets and account organization.
+            secp256k1 creates a one-way private/public relationship and supports
+            signatures. Keccak-256 compresses data into fixed-size digests.
+            EIP-55 overlays limited typo detection on hexadecimal text.
+          </p>
+          <p>
+            Reusing one primitive outside its designed role would remove useful
+            security properties rather than simplify the system. A hash is not
+            a signature scheme, a checksum cannot protect a private key, and an
+            elliptic curve does not provide a human-friendly backup format.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="wallet-title">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">Wallet software</p>
+          <h2 id="wallet-title">What users observe in practice</h2>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <h3>Recovery phrase</h3>
+            <p>
+              Wallets may expose a recovery phrase during setup or backup.
+              Internally, compatible wallets can use it to reproduce a seed and
+              derive accounts. Product details can differ, so compatibility
+              should not be assumed solely from a similar interface.
+            </p>
+          </article>
+
+          <article class="card">
+            <h3>Multiple accounts</h3>
+            <p>
+              Choosing "add account" often derives another child key rather
+              than creating an unrelated backup. The exact path and account
+              discovery procedure determine whether another wallet finds the
+              same accounts.
+            </p>
+          </article>
+
+          <article class="card">
+            <h3>The visible address</h3>
+            <p>
+              Apps usually display the EIP-55 mixed-case form. Ethereum address
+              comparison is based on the underlying 20 bytes, while the case
+              pattern helps interfaces detect some transcription mistakes.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="references">
+    <div class="container">
+      <h2>Primary references</h2>
+
+      <ol class="references">
+        <li>
+          <a href="[bips.dev](https://bips.dev/32/)">BIP-32: Hierarchical Deterministic Wallets</a>
+        </li>
+        <li>
+          <a href="[github.com](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)">
+            BIP-39: Mnemonic Code for Generating Deterministic Keys
+          </a>
+        </li>
+        <li>
+          <a href="[bips.dev](https://bips.dev/44/)">
+            BIP-44: Multi-Account Hierarchy for Deterministic Wallets
+          </a>
+        </li>
+        <li>
+          <a href="[eips.ethereum.org](https://eips.ethereum.org/EIPS/eip-55)">
+            EIP-55: Mixed-case Checksum Address Encoding
+          </a>
+        </li>
+        <li>
+          <a href="[ethereum.github.io](https://ethereum.github.io/yellowpaper/paper.pdf)">
+            Ethereum Yellow Paper
+          </a>
+        </li>
+        <li>
+          <a href="[ethereum.org](https://ethereum.org/developers/docs/accounts/)">
+            Ethereum.org: Ethereum Accounts
+          </a>
+        </li>
+        <li>
+          <a href="[csrc.nist.gov](https://csrc.nist.gov/pubs/fips/202/final)">
+            NIST FIPS 202: SHA-3 Standard
+          </a>
+        </li>
+        <li>
+          <a href="[people.csail.mit.edu](https://people.csail.mit.edu/rivest/Rsapaper.pdf)">
+            Rivest, Shamir and Adleman: Public-Key Cryptosystems
+          </a>
+        </li>
+      </ol>
+
+      <p class="footer-note">
+        Educational material only. Never use sample values or browser
+        demonstrations to protect real assets.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    "use strict";
+
+    const indexInput = document.getElementById("index");
+    const deriveButton = document.getElementById("derive");
+    const pathOutput = document.getElementById("path-output");
+    const privateOutput = document.getElementById("private-output");
+    const publicOutput = document.getElementById("public-output");
+    const addressOutput = document.getElementById("address-output");
+
+    function mix32(value) {
+      let x = value >>> 0;
+      x ^= x >>> 16;
+      x = Math.imul(x, 0x7feb352d);
+      x ^= x >>> 15;
+      x = Math.imul(x, 0x846ca68b);
+      x ^= x >>> 16;
+      return x >>> 0;
+    }
+
+    function placeholderHex(index, length, domain) {
+      let output = "";
+      let state = mix32(index + domain);
+
+      while (output.length < length) {
+        state = mix32(state + 0x9e3779b9 + output.length);
+        output += state.toString(16).padStart(8, "0");
+      }
+
+      return output.slice(0, length);
+    }
+
+    function mixedCasePlaceholder(hex) {
+      return hex
+        .split("")
+        .map((character, position) => {
+          if (!/[a-f]/.test(character)) {
+            return character;
+          }
+
+          return mix32(position + hex.charCodeAt(position)) % 2 === 0
+            ? character.toUpperCase()
+            : character;
+        })
+        .join("");
+    }
+
+    function updateDemo() {
+      const parsed = Number.parseInt(indexInput.value, 10);
+      const index = Number.isFinite(parsed)
+        ? Math.min(9999, Math.max(0, parsed))
+        : 0;
+
+      indexInput.value = String(index);
+
+      const privateId = placeholderHex(index, 64, 101);
+      const publicId = placeholderHex(index, 128, 202);
+      const addressHex = placeholderHex(index, 40, 303);
+
+      pathOutput.textContent = `m/44'/60'/0'/0/${index}`;
+      privateOutput.textContent = `demo-${privateId}`;
+      publicOutput.textContent = `demo-${publicId}`;
+      addressOutput.textContent = `0x${mixedCasePlaceholder(addressHex)}`;
+    }
+
+    deriveButton.addEventListener("click", updateDemo);
+
+    indexInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        updateDemo();
+      }
+    });
+
+    updateDemo();
+  </script>
+</body>
+</html>
