@@ -1,0 +1,1457 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secp256k1 vs Ceasar</title>
+
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #141c30;
+      --panel2: #0f1729;
+      --text: #edf2ff;
+      --muted: #a4b1ca;
+      --blue: #60a5fa;
+      --green: #4ade80;
+      --purple: #c4b5fd;
+      --border: #2b3854;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px 18px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+    }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto 32px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.3rem);
+      margin-bottom: 8px;
+      letter-spacing: -1.5px;
+    }
+
+    h1 span {
+      color: var(--blue);
+    }
+
+    header p {
+      color: var(--muted);
+      max-width: 760px;
+      margin: auto;
+    }
+
+    .message-box {
+      max-width: 1200px;
+      margin: 0 auto 24px;
+      padding: 22px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 650;
+      margin-bottom: 8px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--panel2);
+      color: var(--text);
+      font: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .comparison {
+      max-width: 1200px;
+      margin: auto;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px;
+      align-items: start;
+    }
+
+    .method {
+      min-width: 0;
+      padding: 24px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 18px;
+    }
+
+    .method h2 {
+      margin: 0 0 8px;
+      font-size: 1.65rem;
+    }
+
+    .caesar h2 {
+      color: var(--green);
+    }
+
+    .ecc h2 {
+      color: var(--purple);
+    }
+
+    .subtitle, .muted {
+      color: var(--muted);
+    }
+
+    .tag {
+      display: inline-block;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: .78rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .step {
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      border-radius: 11px;
+      padding: 14px;
+      margin-top: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .step h3 {
+      font-size: 1rem;
+      margin: 0 0 6px;
+    }
+
+    .step p {
+      margin: 5px 0;
+    }
+
+    .key {
+      color: var(--blue);
+      font-weight: 650;
+    }
+
+    .output {
+      padding: 14px;
+      margin-top: 14px;
+      border-radius: 10px;
+      background: #102b25;
+      border: 1px solid #27634d;
+    }
+
+    .output strong {
+      color: var(--green);
+    }
+
+    .cipher-output {
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, monospace;
+      margin-top: 8px;
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      border-radius: 9px;
+      padding: 11px 16px;
+      font: inherit;
+      font-weight: 700;
+      background: var(--blue);
+      color: #081222;
+      margin-top: 12px;
+    }
+
+    button:hover {
+      filter: brightness(1.1);
+    }
+
+    .caesar button {
+      background: var(--green);
+    }
+
+    .ecc button {
+      background: var(--purple);
+    }
+
+    .key-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .key-card {
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px;
+      background: #182238;
+    }
+
+    .key-card strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    code, .mono {
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .note {
+      margin-top: 20px;
+      padding: 14px;
+      background: #292116;
+      border: 1px solid #72552c;
+      border-radius: 10px;
+      color: #f5d9a6;
+      font-size: .92rem;
+    }
+
+    .status {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    @media (max-width: 800px) {
+      .comparison {
+        grid-template-columns: 1fr;
+      }
+
+      body {
+        padding: 20px 12px;
+      }
+
+      .method {
+        padding: 18px;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .key-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1><span>Secp256k1</span> vs <span>Caesar</span></h1>
+    <p>
+      Explore two very different approaches to protecting a message:
+      a classical substitution cipher and modern public-key cryptography
+      combined with symmetric encryption.
+    </p>
+  </header>
+
+  <div class="message-box">
+    <label for="message">Message to encrypt</label>
+    <textarea id="message">Paragraphs are the building blocks of papers. Many students define paragraphs in terms of length: a paragraph is a group of at least five sentences, a paragraph is half a page long, etc. In reality, though, the unity and coherence of ideas among sentences is what constitutes a paragraph. A paragraph is defined as “a group of sentences or a single sentence that forms a unit” (Lunsford and Connors 116). Length and appearance do not determine whether a section in a paper is a paragraph. For instance, in some styles of writing, particularly journalistic styles, a paragraph can be just one sentence long. Ultimately, a paragraph is a sentence or group of sentences that support one main idea. In this handout, we will refer to this as the “controlling idea,” because it controls what happens in the rest of the paragraph.</textarea>
+    <p class="muted">
+      Change the message and run either demonstration to see each step.
+    </p>
+  </div>
+
+  <main class="comparison">
+
+    <!-- CAESAR CIPHER -->
+    <div class="method caesar">
+      <span class="tag">CLASSICAL CRYPTOGRAPHY</span>
+      <h2>Caesar Cipher</h2>
+      <p class="subtitle">
+        Each letter is shifted by a fixed number of positions in the alphabet.
+      </p>
+
+      <label for="shift">Secret key: shift amount</label>
+      <input id="shift" type="number" min="0" max="25" value="3">
+
+      <button onclick="runCaesar()">Encrypt step by step</button>
+
+      <div id="caesarSteps" aria-live="polite">
+        <div class="step">
+          <h3>Step 1 — Original message</h3>
+          <p>Enter a message and click the button to begin.</p>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Key insight:</strong> the same secret shift key is used
+        to encrypt and decrypt. Anyone who learns the key can read the message.
+        There is no public/private key pair.
+      </div>
+    </div>
+
+    <!-- SECP256K1 -->
+    <div class="method ecc">
+      <span class="tag">ELLIPTIC-CURVE CRYPTOGRAPHY</span>
+      <h2>secp256k1</h2>
+      <p class="subtitle">
+        A public/private key pair establishes a shared secret.
+        AES-GCM then encrypts the actual message.
+      </p>
+
+      <p>
+        <strong>Scenario:</strong> Alice wants to send a confidential message
+        to Bob. Bob publishes his public key and keeps his private key secret.
+      </p>
+
+      <button onclick="runECC()">Generate keys and encrypt</button>
+
+      <div id="eccSteps" aria-live="polite">
+        <div class="step">
+          <h3>Step 1 — Bob's key pair</h3>
+          <p>Click the button to generate a fresh demonstration.</p>
+        </div>
+      </div>
+
+      <div class="note">
+        <strong>Key insight:</strong> Bob's public key can be shared with
+        everyone. His private key must remain secret. An ephemeral key lets
+        Alice derive the same shared secret as Bob without sending that secret.
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Caesar cipher: encrypts and decrypts letters A-Z.
+    // Other characters remain unchanged.
+
+    function caesarTransform(text, shift) {
+      return [...text].map(char => {
+        const code = char.charCodeAt(0);
+
+        if (code >= 65 && code <= 90) {
+          return String.fromCharCode(
+            ((code - 65 + shift + 26) % 26) + 65
+          );
+        }
+
+        if (code >= 97 && code <= 122) {
+          return String.fromCharCode(
+            ((code - 97 + shift + 26) % 26) + 97
+          );
+        }
+
+        return char;
+      }).join("");
+    }
+
+    function addStep(container, title, lines) {
+      const section = document.createElement("section");
+      section.className = "step";
+
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      section.appendChild(heading);
+
+      for (const line of lines) {
+        const paragraph = document.createElement("p");
+        paragraph.textContent = line;
+        section.appendChild(paragraph);
+      }
+
+      container.appendChild(section);
+      return section;
+    }
+
+    function addOutput(container, title, value) {
+      const box = document.createElement("div");
+      box.className = "output";
+
+      const heading = document.createElement("strong");
+      heading.textContent = title;
+
+      const content = document.createElement("div");
+      content.className = "cipher-output";
+      content.textContent = value;
+
+      box.append(heading, content);
+      container.appendChild(box);
+    }
+
+    function runCaesar() {
+      const message = document.getElementById("message").value;
+      const rawShift = Number(document.getElementById("shift").value);
+      const container = document.getElementById("caesarSteps");
+
+      container.replaceChildren();
+
+      if (!Number.isInteger(rawShift) || rawShift < 0 || rawShift > 25) {
+        addStep(container, "Invalid key", [
+          "Choose an integer from 0 to 25."
+        ]);
+        return;
+      }
+
+      const shift = rawShift;
+
+      addStep(container, "Step 1 — Start with plaintext", [
+        `Message: ${message}`,
+        "Plaintext is the original readable message."
+      ]);
+
+      addStep(container, "Step 2 — Choose the secret key", [
+        `Key k = ${shift}`,
+        `Each letter moves ${shift} position(s) forward in the alphabet.`,
+        "The alphabet wraps around: after Z comes A."
+      ]);
+
+      const examples = [...message].map(char => {
+        const code = char.charCodeAt(0);
+
+        if (code >= 65 && code <= 90) {
+          const encrypted = caesarTransform(char, shift);
+          return `${char} → ${encrypted}`;
+        }
+
+        if (code >= 97 && code <= 122) {
+          const encrypted = caesarTransform(char, shift);
+          return `${char} → ${encrypted}`;
+        }
+
+        return `${char} → ${char} (unchanged)`;
+      });
+
+      addStep(container, "Step 3 — Transform each character", [
+        ...examples.slice(0, 60),
+        ...(examples.length > 60
+          ? [`...and ${examples.length - 60} more character(s).`]
+          : [])
+      ]);
+
+      const ciphertext = caesarTransform(message, shift);
+
+      addOutput(container, "Step 4 — Ciphertext", ciphertext);
+
+      addStep(container, "Step 5 — Decrypt with the same key", [
+        `Subtract ${shift} from each letter's position.`,
+        `Decrypted message: ${caesarTransform(ciphertext, -shift)}`
+      ]);
+    }
+
+    // secp256k1 demo:
+    // ECDH derives a shared secret; HKDF derives an AES key;
+    // AES-GCM encrypts the message and authenticates its contents.
+    //
+    // The elliptic-curve operations use the audited @noble/curves library.
+    // This is an educational browser demo, not a production protocol.
+
+    async function runECC() {
+      const container = document.getElementById("eccSteps");
+      const message = document.getElementById("message").value;
+      container.replaceChildren();
+
+      const button = document.querySelector(".ecc button");
+      button.disabled = true;
+      button.textContent = "Working...";
+
+      try {
+        const { secp256k1 } = await import(
+          "https://esm.sh/@noble/curves@1.4.0/secp256k1"
+        );
+        const { hkdf } = await import(
+          "https://esm.sh/@noble/hashes@1.3.0/hkdf"
+        );
+        const { sha256 } = await import(
+          "https://esm.sh/@noble/hashes@1.3.0/sha256"
+        );
+
+        const encoder = new TextEncoder();
+        const decoder = new TextDecoder();
+
+        const toHex = bytes =>
+          Array.from(bytes, byte =>
+            byte.toString(16).padStart(2, "0")
+          ).join("");
+
+        const randomBytes = length =>
+          crypto.getRandomValues(new Uint8Array(length));
+
+        const randomPrivateKey = () => {
+          // Rejection sampling ensures a valid secp256k1 private scalar.
+          while (true) {
+            const candidate = randomBytes(32);
+            try {
+              secp256k1.getPublicKey(candidate, true);
+              return candidate;
+            } catch {
+              // Retry if the scalar is outside the valid range.
+            }
+          }
+        };
+
+        addStep(container, "Step 1 — Bob generates his key pair", [
+          "Bob generates a random private key.",
+          "He derives a public key from it using the secp256k1 curve.",
+          "Private key: secret; public key: safe to distribute."
+        ]);
+
+        const bobPrivate = randomPrivateKey();
+        const bobPublic = secp256k1.getPublicKey(bobPrivate, true);
+
+        const keyCards = document.createElement("div");
+        keyCards.className = "key-grid";
+
+        function addKeyCard(title, value, isSecret) {
+          const card = document.createElement("div");
+          card.className = "key-card";
+
+          const strong = document.createElement("strong");
+          strong.textContent = title;
+
+          const code = document.createElement("code");
+          code.textContent = value;
+
+          const note = document.createElement("p");
+          note.className = "muted";
+          note.textContent = isSecret
+            ? "Never share this key."
+            : "Can be shared publicly.";
+
+          card.append(strong, code, note);
+          keyCards.appendChild(card);
+        }
+
+        addKeyCard(
+          "Bob's private key",
+          toHex(bobPrivate),
+          true
+        );
+
+        addKeyCard(
+          "Bob's public key",
+          toHex(bobPublic),
+          false
+        );
+
+        container.appendChild(keyCards);
+
+        addStep(container, "Step 2 — Alice creates an ephemeral key", [
+          "Alice generates a temporary private key and its public key.",
+          "She uses her temporary private key with Bob's public key.",
+          "The result is a shared ECDH secret."
+        ]);
+
+        const aliceEphemeralPrivate = randomPrivateKey();
+        const aliceEphemeralPublic = secp256k1.getPublicKey(
+          aliceEphemeralPrivate,
+          true
+        );
+
+        const aliceShared = secp256k1.getSharedSecret(
+          aliceEphemeralPrivate,
+          bobPublic,
+          true
+        );
+
+        addStep(container, "Step 3 — Bob derives the same secret", [
+          "Bob combines his private key with Alice's ephemeral public key.",
+          "ECDH gives both sides the same shared secret.",
+          "The secret itself is never transmitted."
+        ]);
+
+        const bobShared = secp256k1.getSharedSecret(
+          bobPrivate,
+          aliceEphemeralPublic,
+          true
+        );
+
+        const sameSecret = aliceShared.length === bobShared.length &&
+          aliceShared.every((byte, i) => byte === bobShared[i]);
+
+        if (!sameSecret) {
+          throw new Error("ECDH shared-secret verification failed.");
+        }
+
+        addStep(container, "Step 4 — Derive an encryption key", [
+          "The raw ECDH output is not used directly as an AES key.",
+          "HKDF-SHA-256 derives a 256-bit key from the shared secret.",
+          "Both parties can independently derive the same AES key."
+        ]);
+
+        // Both parties could derive this independently using the same
+        // salt and context. The salt is public, not a secret key.
+        const salt = randomBytes(16);
+        const info = encoder.encode("Secp256k1-vs-Ceasar-demo-v1");
+
+        const aesKeyBytes = hkdf(
+          sha256,
+          aliceShared,
+          salt,
+          info,
+          32
+        );
+
+        const aesKey = await crypto.subtle.importKey(
+          "raw",
+          aesKeyBytes,
+          { name: "AES-GCM" },
+          false,
+          ["encrypt", "decrypt"]
+        );
+
+        addStep(container, "Step 5 — Encrypt with AES-GCM", [
+          "AES-GCM encrypts the actual message using the derived key.",
+          "A fresh 96-bit nonce (IV) is generated for this encryption.",
+          "The nonce is public; never reuse it with the same AES key."
+        ]);
+
+        const iv = randomBytes(12);
+        const ciphertextBuffer = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv },
+          aesKey,
+          encoder.encode(message)
+        );
+
+        const ciphertext = new Uint8Array(ciphertextBuffer);
+
+        addOutput(
+          container,
+          "Encrypted ciphertext (hex)",
+          toHex(ciphertext)
+        );
+
+        addStep(container, "Step 6 — Send the required data", [
+          `Alice's ephemeral public key: ${toHex(aliceEphemeralPublic)}`,
+          `HKDF salt: ${toHex(salt)}`,
+          `AES-GCM nonce: ${toHex(iv)}`,
+          "Alice sends these public values together with the ciphertext.",
+          "The private keys and derived AES key are not sent."
+        ]);
+
+        addStep(container, "Step 7 — Bob decrypts the message", [
+          "Bob uses his private key and Alice's ephemeral public key to derive the shared secret.",
+          "He applies the same HKDF salt and context to derive the AES key.",
+          "AES-GCM verifies the authentication tag and recovers the plaintext."
+        ]);
+
+        const bobAesKeyBytes = hkdf(
+          sha256,
+          bobShared,
+          salt,
+          info,
+          32
+        );
+
+        const bobAesKey = await crypto.subtle.importKey(
+          "raw",
+          bobAesKeyBytes,
+          { name: "AES-GCM" },
+          false,
+          ["decrypt"]
+        );
+
+        const decryptedBuffer = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv },
+          bobAesKey,
+          ciphertext
+        );
+
+        const decrypted = decoder.decode(decryptedBuffer);
+
+        addOutput(container, "Recovered plaintext", decrypted);
+
+        addStep(container, "What the keys actually do", [
+          "Bob's private key: lets Bob derive the shared secret.",
+          "Bob's public key: lets Alice derive that same secret.",
+          "Alice's ephemeral private key: temporary secret used for ECDH.",
+          "AES key: derived from the shared secret; encrypts the message.",
+          "Nonce and HKDF salt: public supporting values, not secret keys."
+        ]);
+
+        const status = document.createElement("p");
+        status.className = "status";
+        status.textContent =
+          "Success: the shared secrets match and the decrypted message matches the original.";
+        container.appendChild(status);
+
+      } catch (error) {
+        addStep(container, "Unable to run the demonstration", [
+          error.message || String(error),
+          "Check your internet connection and open this page in a browser that supports Web Crypto.",
+          "The external cryptography library must load successfully."
+        ]);
+      } finally {
+        button.disabled = false;
+        button.textContent = "Generate keys and encrypt";
+      }
+    }
+
+    runCaesar();
+  </script>
+
+<div class="method">
+  <span class="tag">CRYPTOGRAPHIC ANALYSIS</span>
+  <h2>Similarities & Differences</h2>
+  <p class="subtitle">
+    Comparing the Caesar cipher with a secp256k1-based encryption scheme.
+  </p>
+
+  <div class="step">
+    <h3>1. Encryption and Decryption</h3>
+    <p>
+      <strong>Caesar:</strong> Encryption shifts every letter by a fixed
+      number of positions. Decryption reverses the shift using the same
+      secret key.
+    </p>
+    <p>
+      <strong>secp256k1:</strong> The elliptic curve establishes a shared
+      secret through ECDH. A key-derivation function derives a symmetric
+      key, which encrypts the message using AES-GCM. Decryption derives
+      the same key and verifies the authentication tag before recovering
+      the plaintext.
+    </p>
+  </div>
+
+  <div class="step">
+    <h3>2. Key Space</h3>
+    <p>
+      <strong>Caesar:</strong> There are only 26 possible shifts for
+      the English alphabet, including the ineffective zero shift.
+      An attacker can test every key almost instantly.
+    </p>
+    <p>
+      <strong>secp256k1:</strong> The private key is a valid scalar in
+      the range from 1 to n − 1, where n is the curve's subgroup order.
+      This gives approximately 256 bits of key space, or about
+      2<sup>256</sup> possible private keys. The effective classical
+      security level is approximately 128 bits, not 256 bits.
+    </p>
+  </div>
+
+  <div class="step">
+    <h3>3. Statistical Properties</h3>
+    <p>
+      <strong>Caesar:</strong> Preserves letter frequencies and patterns.
+      Common letters remain common, repeated letters remain repeated,
+      and word lengths are unchanged. Frequency analysis can reveal
+      the plaintext.
+    </p>
+    <p>
+      <strong>secp256k1 + AES-GCM:</strong> With secure key generation
+      and correct nonce handling, the ciphertext does not reveal
+      ordinary plaintext letter-frequency patterns. AES-GCM also
+      detects unauthorized modifications. Ciphertext length and
+      protocol metadata may still reveal information.
+    </p>
+  </div>
+
+  <div class="step">
+    <h3>4. What They Have in Common</h3>
+    <p>
+      Both transform readable plaintext into ciphertext and require
+      the appropriate secret information to recover the message.
+      Both depend on correct key handling, but their security
+      foundations are fundamentally different.
+    </p>
+  </div>
+
+  <div class="output">
+    <strong>Conclusion</strong>
+    <p>
+      Caesar provides only elementary obfuscation and is vulnerable
+      to brute-force attacks and statistical analysis. A properly
+      implemented secp256k1-based scheme combined with AES-GCM provides
+      modern cryptographic security, subject to sound key management,
+      authenticated public keys, and correct protocol design.
+    </p>
+  </div>
+
+  <div class="note">
+    <strong>Important distinction:</strong> secp256k1 is an elliptic
+    curve, not a standalone encryption algorithm. ECDH establishes
+    a shared secret; a key-derivation function and a symmetric cipher
+    such as AES-GCM perform the actual message encryption and
+    decryption.
+  </div>
+</div>
+
+<!-- VULNERABILITIES -->
+<div class="method">
+  <span class="tag">SECURITY ANALYSIS</span>
+  <h2>Vulnerabilities</h2>
+  <p class="subtitle">
+    Two practical attacks demonstrate how a weak key space can
+    compromise encryption, using statistical analysis for Caesar
+    and exhaustive search for restricted elliptic-curve keys.
+  </p>
+
+  <!-- CAESAR ATTACK -->
+  <div class="step">
+    <h3>1. Statistical Cryptanalysis of the Caesar Cipher</h3>
+    <p>
+      English text has a characteristic letter-frequency distribution.
+      For example, E, T, A, and O occur more frequently than J, Q, X,
+      and Z. The Caesar cipher preserves these frequencies, merely
+      shifting which letters appear most often.
+    </p>
+    <p>
+      The attack tries every possible decryption shift and scores
+      each candidate against the expected English letter frequencies
+      using the chi-squared statistic. The candidate with the lowest
+      score is selected as the most likely plaintext.
+    </p>
+
+    <label for="attackShift">Encryption shift (test setting)</label>
+    <input id="attackShift" type="number" min="1" max="25" value="7">
+
+    <button onclick="runCaesarVulnerability()">
+      Run statistical attack
+    </button>
+
+    <div id="caesarAttackResults" aria-live="polite">
+      <p class="muted">
+        Enter a sufficiently long English passage in the message
+        field above to test the attack.
+      </p>
+    </div>
+  </div>
+
+  <!-- ECC ATTACK -->
+  <div class="step">
+    <h3>2. Brute-Force Attack on Restricted secp256k1</h3>
+    <p>
+      In a real secp256k1 implementation, the private key is selected
+      from an enormous range. For this experiment, Bob's private key
+      is deliberately restricted to integers between 1 and 5,000.
+    </p>
+    <p>
+      The attacker enumerates candidate private keys, calculates
+      each candidate public key, and compares it with Bob's known
+      public key. If a match is found, the attacker can derive the
+      ECDH shared secret and decrypt the message.
+    </p>
+
+    <button onclick="runRestrictedECCAttack()">
+      Run restricted-key attack
+    </button>
+
+    <div id="eccAttackResults" aria-live="polite">
+      <p class="muted">
+        This experiment generates a fresh toy key pair and ciphertext,
+        then attempts to recover the private key.
+      </p>
+    </div>
+  </div>
+
+  <!-- COMPARISON -->
+  <div class="step">
+    <h3>3. Comparing the Attacks</h3>
+
+    <p><strong>Caesar — statistical cryptanalysis</strong></p>
+    <p>
+      The attacker exploits the statistical structure of natural
+      language. All 26 shifts can be tested, and letter frequencies
+      help rank the candidates. The attack can fail on short,
+      unusual, or non-English messages.
+    </p>
+
+    <p><strong>Restricted ECC — exhaustive key search</strong></p>
+    <p>
+      The attacker exploits an artificially small private-key space.
+      Each candidate is checked against the public key, without
+      needing to infer anything from the message's letter frequencies.
+      Once the private key is recovered, the attacker can derive
+      the encryption key.
+    </p>
+
+    <p><strong>Properly configured ECC</strong></p>
+    <p>
+      The secp256k1 private scalar has approximately 256 bits of
+      representation and about 2<sup>256</sup> possible valid values.
+      Exhaustive search is therefore infeasible with known classical
+      computing technology. Generic elliptic-curve discrete-logarithm
+      attacks have an estimated work factor on the order of
+      2<sup>128</sup> group operations, which is still infeasible
+      in practice.
+    </p>
+  </div>
+
+  <div class="output">
+    <strong>Conclusion</strong>
+    <p>
+      The Caesar cipher fails because its key space is tiny and
+      its ciphertext leaks language statistics. The toy ECC scheme
+      fails because its private key is selected from an insecurely
+      small range. These are different weaknesses: one exploits
+      predictable plaintext statistics, while the other exploits
+      insufficient key entropy.
+    </p>
+  </div>
+
+  <div class="note">
+    <strong>Experimental limitation:</strong> results depend on
+    message length, language, and the distribution of letters.
+    The restricted ECC demonstration is intentionally insecure;
+    it must not be interpreted as an attack on a properly configured
+    secp256k1 implementation.
+  </div>
+</div>
+<script>
+  // ============================================
+  // 1. CAESAR CIPHER: STATISTICAL CRYPTANALYSIS
+  // ============================================
+
+  const ENGLISH_FREQ = [
+    8.167, 1.492, 2.782, 4.253, 12.702, 2.228,
+    2.015, 6.094, 6.966, 0.153, 0.772, 4.025,
+    2.406, 6.749, 7.507, 1.929, 0.095, 5.987,
+    6.327, 9.056, 2.758, 0.978, 2.360, 0.150,
+    1.974, 0.074
+  ];
+
+  // Encrypt or decrypt a Caesar cipher.
+  // A negative shift decrypts an encrypted message.
+  function caesarTransform(text, shift) {
+    return [...text].map(char => {
+      const code = char.charCodeAt(0);
+
+      if (code >= 65 && code <= 90) {
+        return String.fromCharCode(
+          ((code - 65 + shift + 26) % 26) + 65
+        );
+      }
+
+      if (code >= 97 && code <= 122) {
+        return String.fromCharCode(
+          ((code - 97 + shift + 26) % 26) + 97
+        );
+      }
+
+      return char;
+    }).join("");
+  }
+
+  // Calculate how different a candidate's letter frequencies
+  // are from the expected frequencies of English.
+  function englishChiSquared(text) {
+    const counts = Array(26).fill(0);
+    let total = 0;
+
+    for (const char of text.toUpperCase()) {
+      const code = char.charCodeAt(0);
+
+      if (code >= 65 && code <= 90) {
+        counts[code - 65]++;
+        total++;
+      }
+    }
+
+    if (total === 0) return Infinity;
+
+    let score = 0;
+
+    for (let i = 0; i < 26; i++) {
+      const expected = total * ENGLISH_FREQ[i] / 100;
+      const difference = counts[i] - expected;
+
+      score += difference * difference / expected;
+    }
+
+    return score;
+  }
+
+  // Try all 26 possible decryption shifts and rank the results.
+  function attackCaesar(ciphertext) {
+    const candidates = [];
+
+    for (let shift = 0; shift < 26; shift++) {
+      const plaintext = caesarTransform(ciphertext, -shift);
+
+      candidates.push({
+        shift: shift,
+        plaintext: plaintext,
+        score: englishChiSquared(plaintext)
+      });
+    }
+
+    candidates.sort((a, b) => a.score - b.score);
+
+    return candidates;
+  }
+
+  // Helper to display a step using the existing page styles.
+  function addStep(container, title, lines) {
+    const section = document.createElement("section");
+    section.className = "step";
+
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+    section.appendChild(heading);
+
+    for (const line of lines) {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = line;
+      section.appendChild(paragraph);
+    }
+
+    container.appendChild(section);
+
+    return section;
+  }
+
+  // Helper to display a result using the existing page styles.
+  function addOutput(container, title, value) {
+    const box = document.createElement("div");
+    box.className = "output";
+
+    const heading = document.createElement("strong");
+    heading.textContent = title;
+
+    const content = document.createElement("div");
+    content.className = "cipher-output";
+    content.textContent = value;
+
+    box.append(heading, content);
+    container.appendChild(box);
+  }
+
+  // Called by the Caesar attack button in the HTML.
+  function runCaesarVulnerability() {
+    const message = document.getElementById("message").value;
+    const shift = Number(
+      document.getElementById("attackShift").value
+    );
+
+    const container = document.getElementById(
+      "caesarAttackResults"
+    );
+
+    container.replaceChildren();
+
+    if (!Number.isInteger(shift) || shift < 1 || shift > 25) {
+      addStep(container, "Invalid shift", [
+        "Choose an integer between 1 and 25."
+      ]);
+      return;
+    }
+
+    // Simulate encryption so we can test the attack.
+    const ciphertext = caesarTransform(message, shift);
+
+    const letterCount = (
+      ciphertext.match(/[a-z]/gi) || []
+    ).length;
+
+    addStep(container, "Step 1 — Generate ciphertext", [
+      "Original message: " + message,
+      "Encryption shift: " + shift,
+      "Ciphertext: " + ciphertext,
+      "Letters available for analysis: " + letterCount
+    ]);
+
+    if (letterCount === 0) {
+      addStep(container, "No analyzable letters", [
+        "Enter a message containing letters."
+      ]);
+      return;
+    }
+
+    addStep(container, "Step 2 — Test every possible key", [
+      "The attack tries all 26 shifts.",
+      "Each candidate is scored against English letter frequencies.",
+      "The lowest chi-squared score is considered the best candidate."
+    ]);
+
+    const candidates = attackCaesar(ciphertext);
+    const best = candidates[0];
+
+    addStep(container, "Step 3 — Best candidate", [
+      "Estimated decryption shift: " + best.shift,
+      "Chi-squared score: " + best.score.toFixed(2),
+      "Recovered plaintext: " + best.plaintext
+    ]);
+
+    // Test increasingly long prefixes of the ciphertext.
+    const lengths = [...new Set([
+      10, 20, 40, 80, 160, letterCount
+    ])]
+      .filter(n => n <= letterCount)
+      .sort((a, b) => a - b);
+
+    const results = [];
+
+    for (const length of lengths) {
+      const prefix = [...ciphertext]
+        .filter(char => /[a-z]/i.test(char))
+        .slice(0, length)
+        .join("");
+
+      const ranking = attackCaesar(prefix);
+      const guess = ranking[0];
+
+      results.push({
+        length: length,
+        shift: guess.shift,
+        correct: guess.shift === shift,
+        score: guess.score
+      });
+    }
+
+    addStep(container, "Step 4 — Test different ciphertext lengths", [
+      "The same ciphertext is tested using progressively longer prefixes.",
+      "Short samples may not accurately represent English letter frequencies.",
+      "Longer samples generally give more reliable results, but success is not guaranteed."
+    ]);
+
+    const table = document.createElement("table");
+    table.style.width = "100%";
+    table.style.marginTop = "12px";
+    table.style.borderCollapse = "collapse";
+
+    const rows = [
+      ["Letters", "Guessed key", "Result", "Chi-squared"],
+      ...results.map(result => [
+        String(result.length),
+        String(result.shift),
+        result.correct ? "Correct" : "Incorrect",
+        result.score.toFixed(2)
+      ])
+    ];
+
+    rows.forEach((row, index) => {
+      const tr = document.createElement("tr");
+
+      row.forEach(value => {
+        const cell = document.createElement(
+          index === 0 ? "th" : "td"
+        );
+
+        cell.textContent = value;
+        cell.style.textAlign = "left";
+        cell.style.padding = "8px 5px";
+        cell.style.borderBottom = "1px solid var(--border)";
+
+        tr.appendChild(cell);
+      });
+
+      table.appendChild(tr);
+    });
+
+    container.appendChild(table);
+
+    const correctCount = results.filter(
+      result => result.correct
+    ).length;
+
+    addStep(container, "Step 5 — Evaluate the attack", [
+      "Correct guesses: " + correctCount +
+        " out of " + results.length + " tested lengths.",
+      "The method assumes the plaintext is English.",
+      "Short messages, unusual vocabulary, and other languages can reduce accuracy."
+    ]);
+  }
+
+
+  // ============================================
+  // 2. SECP256K1: RESTRICTED-KEY BRUTE-FORCE ATTACK
+  // ============================================
+
+  async function runRestrictedECCAttack() {
+    const container = document.getElementById(
+      "eccAttackResults"
+    );
+
+    const button = container.parentElement.querySelector("button");
+
+    container.replaceChildren();
+    button.disabled = true;
+    button.textContent = "Running attack...";
+
+    try {
+      // Cryptographic libraries loaded as ES modules.
+      const { secp256k1 } = await import(
+        "https://esm.sh/@noble/curves@1.4.0/secp256k1"
+      );
+
+      const { hkdf } = await import(
+        "https://esm.sh/@noble/hashes@1.3.0/hkdf"
+      );
+
+      const { sha256 } = await import(
+        "https://esm.sh/@noble/hashes@1.3.0/sha256"
+      );
+
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+
+      function toHex(bytes) {
+        return Array.from(bytes, byte =>
+          byte.toString(16).padStart(2, "0")
+        ).join("");
+      }
+
+      function fromInteger(value) {
+        const bytes = new Uint8Array(32);
+        let n = BigInt(value);
+
+        for (let i = 31; i >= 0; i--) {
+          bytes[i] = Number(n & 255n);
+          n >>= 8n;
+        }
+
+        return bytes;
+      }
+
+      function randomBytes(length) {
+        return crypto.getRandomValues(
+          new Uint8Array(length)
+        );
+      }
+
+      // INSECURE TOY CONFIGURATION:
+      // Bob's private key is restricted to 1..5000.
+      const KEY_SPACE = 5000;
+
+      const originalPrivateInteger =
+        1 + Math.floor(Math.random() * KEY_SPACE);
+
+      const bobPrivate = fromInteger(
+        originalPrivateInteger
+      );
+
+      const bobPublic = secp256k1.getPublicKey(
+        bobPrivate,
+        true
+      );
+
+      // Alice generates a temporary private/public key pair.
+      let alicePrivate;
+      let alicePublic;
+
+      while (true) {
+        alicePrivate = randomBytes(32);
+
+        try {
+          alicePublic = secp256k1.getPublicKey(
+            alicePrivate,
+            true
+          );
+          break;
+        } catch {
+          // Retry if the generated scalar is invalid.
+        }
+      }
+
+      addStep(container, "Step 1 — Set up the toy ECC system", [
+        "Private key range: 1 to " + KEY_SPACE,
+        "Bob's public key: " + toHex(bobPublic),
+        "The attacker knows the public key, but not the private key.",
+        "This tiny key range is intentionally insecure."
+      ]);
+
+      // Alice and Bob derive the ECDH shared secret.
+      const sharedAlice = secp256k1.getSharedSecret(
+        alicePrivate,
+        bobPublic,
+        true
+      );
+
+      // Public salt, nonce, and agreed HKDF context.
+      const salt = randomBytes(16);
+      const iv = randomBytes(12);
+      const info = encoder.encode("restricted-ecc-demo-v1");
+
+      const aesKeyBytes = hkdf(
+        sha256,
+        sharedAlice,
+        salt,
+        info,
+        32
+      );
+
+      const aesKey = await crypto.subtle.importKey(
+        "raw",
+        aesKeyBytes,
+        { name: "AES-GCM" },
+        false,
+        ["encrypt"]
+      );
+
+      const originalMessage =
+        document.getElementById("message").value;
+
+      const ciphertext = new Uint8Array(
+        await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: iv },
+          aesKey,
+          encoder.encode(originalMessage)
+        )
+      );
+
+      addStep(container, "Step 2 — Obtain the ciphertext", [
+        "Alice's ephemeral public key: " + toHex(alicePublic),
+        "HKDF salt: " + toHex(salt),
+        "AES-GCM nonce: " + toHex(iv),
+        "Ciphertext (hex): " + toHex(ciphertext),
+        "These values can be public. The private keys remain secret."
+      ]);
+
+      addStep(container, "Step 3 — Search the key space", [
+        "For each candidate private key d, compute Q = dG.",
+        "Compare the candidate public key with Bob's known public key.",
+        "A match identifies the private key."
+      ]);
+
+      const startTime = performance.now();
+      let recoveredInteger = null;
+      let attempts = 0;
+
+      for (
+        let candidate = 1;
+        candidate <= KEY_SPACE;
+        candidate++
+      ) {
+        attempts++;
+
+        const candidatePrivate = fromInteger(candidate);
+
+        const candidatePublic = secp256k1.getPublicKey(
+          candidatePrivate,
+          true
+        );
+
+        let matches =
+          candidatePublic.length === bobPublic.length;
+
+        for (
+          let i = 0;
+          matches && i < bobPublic.length;
+          i++
+        ) {
+          if (candidatePublic[i] !== bobPublic[i]) {
+            matches = false;
+          }
+        }
+
+        if (matches) {
+          recoveredInteger = candidate;
+          break;
+        }
+
+        // Yield periodically to keep the browser responsive.
+        if (candidate % 100 === 0) {
+          await new Promise(resolve =>
+            setTimeout(resolve, 0)
+          );
+        }
+      }
+
+      const elapsed = performance.now() - startTime;
+
+      if (recoveredInteger === null) {
+        addStep(container, "Attack failed", [
+          "No matching private key was found."
+        ]);
+        return;
+      }
+
+      addStep(container, "Step 4 — Recover the private key", [
+        "Recovered private key: " + recoveredInteger,
+        "Candidates checked: " + attempts,
+        "Elapsed search time: " + elapsed.toFixed(2) + " ms",
+        "Key recovery successful: " +
+          (recoveredInteger === originalPrivateInteger ? "Yes" : "No")
+      ]);
+
+      // Derive the same ECDH shared secret using the recovered key.
+      const recoveredPrivate = fromInteger(recoveredInteger);
+
+      const sharedRecovered = secp256k1.getSharedSecret(
+        recoveredPrivate,
+        alicePublic,
+        true
+      );
+
+      const recoveredAesBytes = hkdf(
+        sha256,
+        sharedRecovered,
+        salt,
+        info,
+        32
+      );
+
+      const recoveredAesKey = await crypto.subtle.importKey(
+        "raw",
+        recoveredAesBytes,
+        { name: "AES-GCM" },
+        false,
+        ["decrypt"]
+      );
+
+      const decryptedBuffer = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: iv },
+        recoveredAesKey,
+        ciphertext
+      );
+
+      const recoveredMessage = decoder.decode(
+        decryptedBuffer
+      );
+
+      addStep(container, "Step 5 — Derive the AES key", [
+        "Use the recovered private key and Alice's ephemeral public key.",
+        "Derive the shared secret using ECDH.",
+        "Apply HKDF-SHA-256 with the same salt and context.",
+        "The resulting AES key allows decryption."
+      ]);
+
+      addOutput(
+        container,
+        "Recovered plaintext",
+        recoveredMessage
+      );
+
+      addStep(container, "Step 6 — Evaluate the attack", [
+        "Original private key: " + originalPrivateInteger,
+        "Recovered private key: " + recoveredInteger,
+        "Plaintext recovered correctly: " +
+          (recoveredMessage === originalMessage ? "Yes" : "No"),
+        "The attack succeeded because the key space was restricted to only " +
+          KEY_SPACE + " candidates."
+      ]);
+
+      addStep(container, "Why real secp256k1 is different", [
+        "A properly generated secp256k1 private key has approximately 256 bits of key space.",
+        "Exhaustive search over the full key space is computationally infeasible.",
+        "The generic classical elliptic-curve discrete-logarithm attack has an estimated work factor of about 2^128 operations.",
+        "This demonstration attacks a deliberately weakened toy configuration, not standard secp256k1."
+      ]);
+
+    } catch (error) {
+      addStep(container, "Unable to run the experiment", [
+        error.message || String(error),
+        "Check your internet connection and browser support for Web Crypto.",
+        "The cryptographic ES modules must load successfully."
+      ]);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Run restricted-key attack";
+    }
+  }
+</script>
+</body>
+</html>
