@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stochastic Penetration Models</title>
+<style>
+:root {
+  --bg:#0b1020; --panel:#141c30; --panel2:#0f1729;
+  --text:#edf2ff; --muted:#a4b1ca; --blue:#60a5fa;
+  --green:#4ade80; --purple:#c4b5fd; --border:#2b3854;
+  --orange:#fb923c;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; padding:28px 16px; background:var(--bg);
+  color:var(--text); font-family:system-ui,sans-serif; line-height:1.6;
+}
+header,.controls,.comparison,.theory,.results,.footer {
+  max-width:1250px; margin-left:auto; margin-right:auto;
+}
+header { text-align:center; margin-bottom:28px; }
+h1 { font-size:clamp(2rem,5vw,3rem); line-height:1.2; }
+h1 span { color:var(--blue); }
+.subtitle,.muted { color:var(--muted); }
+header p { max-width:850px; margin:auto; }
+.controls,.method,.theory,.results,.footer {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:16px; padding:20px; margin-bottom:20px;
+}
+.control-grid {
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:16px;
+}
+label { display:block; font-weight:650; margin-bottom:6px; }
+input,select {
+  width:100%; background:var(--panel2); color:var(--text);
+  border:1px solid var(--border); padding:10px; border-radius:8px;
+  font:inherit;
+}
+button {
+  background:var(--blue); color:#07111f; border:0;
+  padding:11px 17px; border-radius:9px; cursor:pointer;
+  font:inherit; font-weight:700; margin-top:12px;
+}
+button:hover { filter:brightness(1.08); }
+button:disabled { opacity:.6; cursor:wait; }
+.comparison {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:20px; align-items:start;
+}
+.method { min-width:0; margin:0 0 20px; }
+.method h2 { margin-top:0; }
+.bernoulli h2 { color:var(--green); }
+.rademacher h2 { color:var(--purple); }
+.tag {
+  display:inline-block; font-size:.78rem; color:var(--muted);
+  border:1px solid var(--border); padding:3px 8px;
+  border-radius:6px; margin-bottom:8px;
+}
+.step {
+  background:var(--panel2); border:1px solid var(--border);
+  border-radius:10px; padding:14px; margin-top:14px;
+  overflow-wrap:anywhere;
+}
+.step h3 { font-size:1rem; margin:0 0 6px; }
+.step p { margin:5px 0; }
+.stats {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px; margin-top:12px;
+}
+.stat {
+  background:#182238; border:1px solid var(--border);
+  border-radius:9px; padding:10px; min-width:0;
+}
+.stat strong { display:block; font-size:1.15rem; }
+.stat span { color:var(--muted); font-size:.85rem; }
+.chart-wrap {
+  width:100%; background:var(--panel2);
+  border:1px solid var(--border); border-radius:10px;
+  margin-top:12px; padding:8px;
+}
+canvas { display:block; width:100%; height:260px; }
+.chart-title { font-size:.92rem; font-weight:700; margin-top:12px; }
+.table-wrap { overflow-x:auto; margin-top:12px; }
+table { border-collapse:collapse; width:100%; min-width:570px; }
+th,td {
+  text-align:left; padding:9px; border-bottom:1px solid var(--border);
+}
+th { color:var(--blue); }
+.note {
+  background:#292116; border:1px solid #72552c;
+  color:#f5d9a6; padding:14px; border-radius:10px; margin-top:16px;
+}
+.good {
+  background:#102b25; border:1px solid #27634d;
+  padding:14px; border-radius:10px; margin-top:14px;
+}
+.formula {
+  font-family:ui-monospace,Consolas,monospace;
+  overflow-wrap:anywhere; color:var(--blue);
+}
+ul { padding-left:22px; }
+@media(max-width:850px) {
+  .comparison { grid-template-columns:1fr; }
+  .control-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:430px) {
+  .control-grid,.stats { grid-template-columns:1fr; }
+  body { padding:14px 9px; }
+  .controls,.method,.theory,.results,.footer { padding:14px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>Stochastic</span> Penetration Models</h1>
+  <p class="subtitle">
+    Law of Large Numbers, variance scaling, and the Central Limit
+    Theorem for Bernoulli and Rademacher random walks.
+  </p>
+  <p>
+    Model penetration scores across n steps and simulate m independent
+    trajectories. Explore how the total, average, and normalized total
+    behave as the system size increases.
+  </p>
+</header>
+
+<section class="controls">
+  <h2>Simulation parameters</h2>
+  <div class="control-grid">
+    <div>
+      <label for="n">System size n</label>
+      <input id="n" type="number" min="10" max="10000" step="10" value="200">
+    </div>
+    <div>
+      <label for="m">Number of attackers m</label>
+      <input id="m" type="number" min="10" max="5000" step="10" value="500">
+    </div>
+    <div>
+      <label for="p">Bernoulli probability p</label>
+      <input id="p" type="number" min="0" max="1" step="0.05" value="0.5">
+    </div>
+    <div>
+      <label for="quantity">Distribution to compare</label>
+      <select id="quantity">
+        <option value="total">Total score Sₙ</option>
+        <option value="average">Average score Sₙ/n</option>
+        <option value="normalized">Normalized total Sₙ/√n</option>
+      </select>
+    </div>
+  </div>
+  <button id="runButton" onclick="runSimulation()">Run simulation</button>
+  <button onclick="resetParameters()" style="background:var(--purple)">
+    Reset parameters
+  </button>
+  <p class="muted">
+    Each attacker generates an independent trajectory. The same n and m
+    are used for both models. A fresh simulation is generated on each run.
+  </p>
+  <div id="runStatus" aria-live="polite" class="muted"></div>
+</section>
+
+<section class="comparison">
+  <div class="method bernoulli">
+    <span class="tag">MODEL A</span>
+    <h2>Bernoulli model</h2>
+    <p>
+      Independent increments Xᵢ ∈ {0,1}, with P(Xᵢ = 1) = p.
+      A successful step contributes one unit; an unsuccessful step
+      contributes zero.
+    </p>
+    <div class="step">
+      <h3>Theoretical properties</h3>
+      <p>Mean of an increment: <span class="formula">E[Xᵢ] = p</span></p>
+      <p>Variance of an increment:
+        <span class="formula">Var(Xᵢ) = p(1 − p)</span>
+      </p>
+      <p>Total:
+        <span class="formula">Sₙ ~ Binomial(n,p)</span>
+      </p>
+      <p>
+        Average converges in probability to p, not necessarily zero.
+      </p>
+    </div>
+    <div class="stats" id="bernoulliStats"></div>
+    <div class="chart-title">Sample trajectories</div>
+    <div class="chart-wrap"><canvas id="bernoulliPath"></canvas></div>
+    <div class="chart-title">Empirical distribution</div>
+    <div class="chart-wrap"><canvas id="bernoulliHist"></canvas></div>
+    <div class="step" id="bernoulliInterpretation"></div>
+  </div>
+
+  <div class="method rademacher">
+    <span class="tag">MODEL B</span>
+    <h2>Rademacher model</h2>
+    <p>
+      Independent increments Xᵢ ∈ {−1,+1}, with equal probability
+      1/2. Positive and negative contributions are equally likely.
+    </p>
+    <div class="step">
+      <h3>Theoretical properties</h3>
+      <p>Mean of an increment:
+        <span class="formula">E[Xᵢ] = 0</span>
+      </p>
+      <p>Variance of an increment:
+        <span class="formula">Var(Xᵢ) = 1</span>
+      </p>
+      <p>
+        The average converges in probability to zero; the normalized
+        total converges in distribution to a standard normal.
+      </p>
+    </div>
+    <div class="stats" id="rademacherStats"></div>
+    <div class="chart-title">Sample trajectories</div>
+    <div class="chart-wrap"><canvas id="rademacherPath"></canvas></div>
+    <div class="chart-title">Empirical distribution</div>
+    <div class="chart-wrap"><canvas id="rademacherHist"></canvas></div>
+    <div class="step" id="rademacherInterpretation"></div>
+  </div>
+</section>
+
+<section class="results">
+  <h2>Compare the three quantities</h2>
+  <p class="subtitle">
+    Empirical means and variances across the m simulated attackers,
+    alongside the theoretical values for the selected model.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Quantity</th>
+          <th>Model</th>
+          <th>Theoretical mean</th>
+          <th>Theoretical variance</th>
+          <th>Empirical mean</th>
+          <th>Empirical variance</th>
+        </tr>
+      </thead>
+      <tbody id="comparisonTable"></tbody>
+    </table>
+  </div>
+  <div id="cltResult" class="good"></div>
+</section>
+
+<section class="theory">
+  <h2>Mathematical interpretation</h2>
+
+  <div class="step">
+    <h3>1. Total score</h3>
+    <p class="formula">Sₙ = X₁ + X₂ + ··· + Xₙ</p>
+    <p>
+      By independence, means and variances add. In the Bernoulli model,
+      E[Sₙ] = np and Var(Sₙ) = np(1 − p). In the Rademacher model,
+      E[Sₙ] = 0 and Var(Sₙ) = n.
+    </p>
+    <p>
+      Thus, total scores typically grow in magnitude with system size:
+      the Bernoulli total grows linearly when p is positive, while the
+      centered Rademacher total fluctuates on the order of √n.
+    </p>
+  </div>
+
+  <div class="step">
+    <h3>2. Average score and the Law of Large Numbers</h3>
+    <p class="formula">Sₙ/n → E[X₁] in probability</p>
+    <p>
+      The Bernoulli average approaches p, and the Rademacher average
+      approaches zero. Their variances are p(1 − p)/n and 1/n,
+      respectively. These variances tend to zero, so the averages
+      concentrate around their expected values.
+    </p>
+  </div>
+
+  <div class="step">
+    <h3>3. Normalized total and variance</h3>
+    <p class="formula">Sₙ/√n</p>
+    <p>
+      The normalized total has variance p(1 − p) in the Bernoulli
+      model and 1 in the Rademacher model, regardless of n.
+      The normalization prevents variance from growing with n.
+    </p>
+    <p>
+      However, the Bernoulli normalized total has mean p√n. Unless
+      p = 0, it does not converge to a standard normal distribution.
+      To apply the Central Limit Theorem to Bernoulli increments,
+      center and scale the sum:
+    </p>
+    <p class="formula">
+      (Sₙ − np) / √(np(1 − p)) → N(0,1), for 0 &lt; p &lt; 1
+    </p>
+  </div>
+
+  <div class="step">
+    <h3>4. Central Limit Theorem for Rademacher increments</h3>
+    <p class="formula">Sₙ/√n → N(0,1) in distribution</p>
+    <p>
+      Each Rademacher increment has mean zero and variance one.
+      As n increases, the discrete distribution of the normalized
+      sum approaches the bell-shaped standard normal distribution.
+      Individual trajectories remain random; it is the distribution
+      across repeated trajectories that converges.
+    </p>
+  </div>
+
+  <div class="note">
+    <strong>Interpretation of attackers and systems:</strong>
+    n controls the number of steps contributing to each attacker's
+    score. m controls how many independent outcomes are observed.
+    Increasing n reveals the limiting behavior of the stochastic
+    process; increasing m improves the empirical estimate of its
+    distribution. This model assumes independent increments and
+    independent attackers—it does not explicitly model interactions
+    between attackers or dependencies between systems.
+  </div>
+</section>
+
+<section class="footer">
+  <div class="interpretation-step">
+  <h3>Effect of System Size and Number of Attackers</h3>
+
+  <ul>
+    <li>
+      <strong>System size (n):</strong>
+      The number of steps in the penetration process. As n increases,
+      the aggregate penetration score becomes more stable relative to
+      its expected value. Under the Bernoulli model, the expected total
+      score grows as np, while its variance grows as np(1-p).
+      Under the Rademacher model, the expected total is 0 and the
+      variance grows as n.
+    </li>
+
+    <li>
+      <strong>Number of attackers (m):</strong>
+      Increasing m produces more independent simulated penetration
+      trajectories. This does not change the theoretical distribution
+      of an individual attacker's score, but it improves the accuracy
+      of empirical estimates, such as the sample mean and variance.
+    </li>
+
+    <li>
+      <strong>Aggregate penetration score:</strong>
+      If the aggregate score is defined as the sum across all m
+      attackers and all n steps, its expected value and variance are
+      multiplied by m, assuming all increments are independent.
+      Specifically, the Bernoulli model has expected aggregate score
+      mnp and variance mnp(1-p), while the Rademacher model has
+      expected aggregate score 0 and variance mn.
+    </li>
+
+    <li>
+      <strong>Interpretation:</strong>
+      Increasing n increases the amount of penetration activity
+      represented in the score, whereas increasing m improves the
+      statistical reliability of the simulation. These effects should
+      be distinguished: a larger sample of attackers does not
+      necessarily mean that each attacker is more effective.
+    </li>
+  </ul>
+</div>
+</section>
+
+<script>
+const $ = id => document.getElementById(id);
+
+let lastResults = null;
+
+function mean(values) {
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+function variance(values) {
+  const avg = mean(values);
+  return mean(values.map(x => (x - avg) ** 2));
+}
+
+function stdDev(values) {
+  return Math.sqrt(variance(values));
+}
+
+function normalCDF(x) {
+  // Abramowitz-Stegun approximation to the standard normal CDF.
+  const sign = x < 0 ? -1 : 1;
+  const z = Math.abs(x) / Math.sqrt(2);
+  const t = 1 / (1 + 0.3275911 * z);
+  const erf = 1 - (
+    (((((1.061405429 * t - 1.453152027) * t)
+      + 1.421413741) * t - 0.284496736) * t
+      + 0.254829592) * t * Math.exp(-z * z)
+  );
+  return 0.5 * (1 + sign * erf);
+}
+
+function generateModel(n, m, model, p) {
+  const paths = [];
+  const totals = [];
+  const averages = [];
+  const normalized = [];
+
+  for (let j = 0; j < m; j++) {
+    let score = 0;
+    const path = [0];
+
+    for (let i = 0; i < n; i++) {
+      const x = model === "bernoulli"
+        ? (Math.random() < p ? 1 : 0)
+        : (Math.random() < 0.5 ? 1 : -1);
+
+      score += x;
+      path.push(score);
+    }
+
+    paths.push(path);
+    totals.push(score);
+    averages.push(score / n);
+    normalized.push(score / Math.sqrt(n));
+  }
+
+  return { paths, totals, averages, normalized };
+}
+
+function quantityInfo(model, n, p, quantity) {
+  let mu, v, label;
+
+  if (quantity === "total") {
+    mu = model === "bernoulli" ? n * p : 0;
+    v = model === "bernoulli" ? n * p * (1 - p) : n;
+    label = "Sₙ";
+  } else if (quantity === "average") {
+    mu = model === "bernoulli" ? p : 0;
+    v = model === "bernoulli"
+      ? p * (1 - p) / n
+      : 1 / n;
+    label = "Sₙ/n";
+  } else {
+    mu = model === "bernoulli" ? p * Math.sqrt(n) : 0;
+    v = model === "bernoulli" ? p * (1 - p) : 1;
+    label = "Sₙ/√n";
+  }
+
+  return { mu, v, label };
+}
+
+function getValues(result, quantity) {
+  return result[{
+    total: "totals",
+    average: "averages",
+    normalized: "normalized"
+  }[quantity]];
+}
+
+function setupCanvas(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const width = Math.max(300, rect.width);
+  const height = 260;
+
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  return { ctx, width, height };
+}
+
+function drawPath(canvas, result, model, n) {
+  const { ctx, width, height } = setupCanvas(canvas);
+  ctx.clearRect(0, 0, width, height);
+
+  const left = 43, right = 12, top = 18, bottom = 32;
+  const plotW = width - left - right;
+  const plotH = height - top - bottom;
+
+  // Show up to 25 trajectories for clarity.
+  const selected = result.paths.slice(0, Math.min(25, result.paths.length));
+  const stride = Math.max(1, Math.ceil(n / 500));
+
+  let minY = Infinity, maxY = -Infinity;
+  selected.forEach(path => {
+    for (let i = 0; i < path.length; i += stride) {
+      minY = Math.min(minY, path[i]);
+      maxY = Math.max(maxY, path[i]);
+    }
+    minY = Math.min(minY, path[n]);
+    maxY = Math.max(maxY, path[n]);
+  });
+
+  if (model === "bernoulli") minY = Math.min(0, minY);
+  if (minY === maxY) { minY -= 1; maxY += 1; }
+
+  const pad = (maxY - minY) * 0.08;
+  minY -= pad;
+  maxY += pad;
+
+  const x = i => left + (i / n) * plotW;
+  const y = value => top + (maxY - value) / (maxY - minY) * plotH;
+
+  ctx.font = "11px system-ui";
+  ctx.fillStyle = "#a4b1ca";
+  ctx.strokeStyle = "#2b3854";
+  ctx.lineWidth = 1;
+
+  for (let k = 0; k <= 4; k++) {
+    const val = minY + (maxY - minY) * k / 4;
+    const yy = y(val);
+    ctx.beginPath();
+    ctx.moveTo(left, yy);
+    ctx.lineTo(width - right, yy);
+    ctx.stroke();
+    ctx.fillText(val.toFixed(1), 3, yy + 4);
+  }
+
+  ctx.fillText("0", left, height - 10);
+  ctx.fillText(String(n), width - right - 24, height - 10);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(left, top, plotW, plotH);
+  ctx.clip();
+
+  selected.forEach((path, index) => {
+    ctx.strokeStyle = model === "bernoulli"
+      ? `rgba(74,222,128,${0.2 + (index % 4) * 0.06})`
+      : `rgba(196,181,253,${0.2 + (index % 4) * 0.06})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+
+    for (let i = 0; i <= n; i += stride) {
+      const xx = x(i), yy = y(path[i]);
+      if (i === 0) ctx.moveTo(xx, yy);
+      else ctx.lineTo(xx, yy);
+    }
+
+    if (n % stride !== 0) ctx.lineTo(x(n), y(path[n]));
+    ctx.stroke();
+  });
+
+  ctx.restore();
+
+  ctx.fillStyle = "#a4b1ca";
+  ctx.fillText("Step", width / 2 - 12, height - 1);
+}
+
+function drawHistogram(canvas, values, model, theoreticalMean, theoreticalVar) {
+  const { ctx, width, height } = setupCanvas(canvas);
+  ctx.clearRect(0, 0, width, height);
+
+  const left = 43, right = 12, top = 18, bottom = 34;
+  const plotW = width - left - right;
+  const plotH = height - top - bottom;
+
+  const dataMin = Math.min(...values);
+  const dataMax = Math.max(...values);
+  const sd = Math.sqrt(theoreticalVar);
+
+  // Use a theory-informed window to show tail behavior.
+  let minX = Math.min(dataMin, theoreticalMean - 4 * sd);
+  let maxX = Math.max(dataMax, theoreticalMean + 4 * sd);
+
+  if (!Number.isFinite(minX) || !Number.isFinite(maxX)) {
+    minX = -1; maxX = 1;
+  }
+  if (minX === maxX) { minX -= 1; maxX += 1; }
+
+  // Keep histograms readable even when a Bernoulli distribution is
+  // concentrated at one point.
+  const bins = 35;
+  const counts = Array(bins).fill(0);
+  const binWidth = (maxX - minX) / bins;
+
+  values.forEach(value => {
+    let i = Math.floor((value - minX) / binWidth);
+    i = Math.max(0, Math.min(bins - 1, i));
+    counts[i]++;
+  });
+
+  const maxCount = Math.max(1, ...counts);
+  const x = value => left + (value - minX) / (maxX - minX) * plotW;
+  const y = count => top + plotH - count / maxCount * plotH;
+
+  ctx.font = "11px system-ui";
+  ctx.fillStyle = "#a4b1ca";
+  ctx.strokeStyle = "#2b3854";
+
+  for (let k = 0; k <= 4; k++) {
+    const count = maxCount * k / 4;
+    const yy = y(count);
+    ctx.beginPath();
+    ctx.moveTo(left, yy);
+    ctx.lineTo(width - right, yy);
+    ctx.stroke();
+    ctx.fillText(Math.round(count), 5, yy + 4);
+  }
+
+  counts.forEach((count, i) => {
+    const x0 = x(minX + i * binWidth);
+    const x1 = x(minX + (i + 1) * binWidth);
+    ctx.fillStyle = model === "bernoulli" ? "#4ade80" : "#c4b5fd";
+    ctx.globalAlpha = 0.8;
+    ctx.fillRect(x0 + 1, y(count), Math.max(1, x1 - x0 - 2), top + plotH - y(count));
+  });
+  ctx.globalAlpha = 1;
+
+  // Overlay the standard normal reference for Rademacher S_n/sqrt(n).
+  if (model === "rademacher" && theoreticalVar === 1 &&
+      Math.abs(theoreticalMean) < 1e-10) {
+    ctx.strokeStyle = "#fb923c";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    // Convert the normal density to approximate histogram counts.
+    for (let i = 0; i <= 200; i++) {
+      const value = minX + (maxX - minX) * i / 200;
+      const density = Math.exp(-value * value / 2) /
+        Math.sqrt(2 * Math.PI);
+      const expectedCount = values.length * binWidth * density;
+      const xx = x(value);
+      const yy = y(expectedCount);
+
+      if (i === 0) ctx.moveTo(xx, yy);
+      else ctx.lineTo(xx, yy);
+    }
+
+    ctx.stroke();
+    ctx.fillStyle = "#fb923c";
+    ctx.fillText("N(0,1) reference", Math.max(left + 5, width - 130), top + 12);
+  }
+
+  // Mark the theoretical mean.
+  const meanX = x(theoreticalMean);
+  if (meanX >= left && meanX <= width - right) {
+    ctx.strokeStyle = "#60a5fa";
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(meanX, top);
+    ctx.lineTo(meanX, top + plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.fillStyle = "#a4b1ca";
+  ctx.fillText(minX.toFixed(2), left, height - 12);
+  ctx.fillText(maxX.toFixed(2), width - right - 42, height - 12);
+  ctx.fillText("Value", width / 2 - 14, height - 1);
+}
+
+function statCard(label, value) {
+  return `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`;
+}
+
+function addStep(container, title, lines) {
+    const section = document.createElement("div");
+    section.className = "interpretation-step";
+
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+    section.appendChild(heading);
+
+    const list = document.createElement("ul");
+
+    lines.forEach(function(line) {
+      const item = document.createElement("li");
+      item.textContent = line;
+      list.appendChild(item);
+    });
+
+    section.appendChild(list);
+    container.appendChild(section);
+  }
+
+function renderModel(model, result, n, p, quantity) {
+  const isBernoulli = model === "bernoulli";
+  const name = isBernoulli ? "bernoulli" : "rademacher";
+  const info = quantityInfo(model, n, p, quantity);
+  const values = getValues(result, quantity);
+
+  const empiricalMean = mean(values);
+  const empiricalVariance = variance(values);
+
+  $(name + "Stats").innerHTML =
+    statCard("Mean (empirical)", empiricalMean.toFixed(4)) +
+    statCard("Mean (theoretical)", info.mu.toFixed(4)) +
+    statCard("Variance (empirical)", empiricalVariance.toFixed(4)) +
+    statCard("Variance (theoretical)", info.v.toFixed(4));
+
+  drawPath($(name + "Path"), result, model, n);
+  drawHistogram($(name + "Hist"), values, model, info.mu, info.v);
+
+  const avgInfo = quantityInfo(model, n, p, "average");
+  const normInfo = quantityInfo(model, n, p, "normalized");
+  const avgValues = result.averages;
+  const normValues = result.normalized;
+
+  const details = $(name + "Interpretation");
+  details.innerHTML = "";
+
+  addStep(details, "Interpretation of the selected model", [
+    "Selected quantity: " + info.label,
+    "Expected value: " + info.mu.toFixed(4),
+    "Theoretical variance: " + info.v.toFixed(4),
+    "Observed mean: " + empiricalMean.toFixed(4),
+    "Observed variance: " + empiricalVariance.toFixed(4)
+  ]);
+
+  addStep(details, "Average and normalized total", [
+    "Average Sₙ/n: empirical mean = " +
+      mean(avgValues).toFixed(4) +
+      "; theoretical mean = " + avgInfo.mu.toFixed(4) + ".",
+    "Variance of average: empirical = " +
+      variance(avgValues).toFixed(4) +
+      "; theoretical = " + avgInfo.v.toFixed(4) + ".",
+    "Normalized total Sₙ/√n: empirical mean = " +
+      mean(normValues).toFixed(4) +
+      "; theoretical mean = " + normInfo.mu.toFixed(4) + ".",
+    "Variance of normalized total: empirical = " +
+      variance(normValues).toFixed(4) +
+      "; theoretical = " + normInfo.v.toFixed(4) + "."
+  ]);
+
+  if (isBernoulli) {
+    addStep(details, "Law of Large Numbers", [
+      "The average approaches p = " + p.toFixed(3) + " as n grows.",
+      "Its theoretical variance is p(1 − p)/n, which tends to zero.",
+      "The normalized total has mean p√n; if p > 0, it does not converge to N(0,1).",
+      "For the Bernoulli CLT, center the total by np and divide by √(np(1 − p)), assuming 0 < p < 1."
+    ]);
+  } else {
+    addStep(details, "LLN and CLT", [
+      "The average approaches zero in probability.",
+      "Its variance is 1/n, while the normalized total has variance 1.",
+      "As n increases, Sₙ/√n approaches a standard normal distribution in distribution.",
+      "The orange curve on the histogram is the N(0,1) reference."
+    ]);
+  }
+}
+
+function renderComparison(n, p, bernoulli, rademacher) {
+  const quantities = [
+    ["total", "Total Sₙ"],
+    ["average", "Average Sₙ/n"],
+    ["normalized", "Normalized Sₙ/√n"]
+  ];
+
+  const rows = [];
+
+  for (const [key, label] of quantities) {
+    for (const [model, result] of [
+      ["Bernoulli", bernoulli],
+      ["Rademacher", rademacher]
+    ]) {
+      const modelKey = model === "Bernoulli" ? "bernoulli" : "rademacher";
+      const info = quantityInfo(modelKey, n, p, key);
+      const values = getValues(result, key);
+
+      rows.push(`
+        <tr>
+          <td>${label}</td>
+          <td>${model}</td>
+          <td>${info.mu.toFixed(4)}</td>
+          <td>${info.v.toFixed(4)}</td>
+          <td>${mean(values).toFixed(4)}</td>
+          <td>${variance(values).toFixed(4)}</td>
+        </tr>
+      `);
+    }
+  }
+
+  $("comparisonTable").innerHTML = rows.join("");
+
+  const normValues = rademacher.normalized;
+  const observedMean = mean(normValues);
+  const observedVariance = variance(normValues);
+
+  // Compare empirical normalized Rademacher scores with the
+  // standard normal using a simple interval probability.
+  const withinOne = normValues.filter(x => x >= -1 && x <= 1).length /
+    normValues.length;
+  const withinTwo = normValues.filter(x => x >= -2 && x <= 2).length /
+    normValues.length;
+
+  $("cltResult").innerHTML = `
+    <strong>CLT check: Rademacher normalized total</strong>
+    <p>
+      For Sₙ/√n, the theoretical limit is N(0,1). In this simulation,
+      the empirical mean is ${observedMean.toFixed(4)} and the empirical
+      variance is ${observedVariance.toFixed(4)}.
+    </p>
+    <p>
+      Proportion in [−1,1]: ${(100 * withinOne).toFixed(2)}%
+      (standard normal: about 68.27%).<br>
+      Proportion in [−2,2]: ${(100 * withinTwo).toFixed(2)}%
+      (standard normal: about 95.45%).
+    </p>
+    <p>
+      With finite n and m, these values fluctuate. Increasing n improves
+      the normal approximation; increasing m reduces Monte Carlo noise.
+    </p>
+  `;
+}
+
+function runSimulation() {
+  const n = Number($("n").value);
+  const m = Number($("m").value);
+  const p = Number($("p").value);
+  const quantity = $("quantity").value;
+
+  if (!Number.isInteger(n) || n < 10 || n > 10000) {
+    alert("Choose n between 10 and 10,000.");
+    return;
+  }
+
+  if (!Number.isInteger(m) || m < 10 || m > 5000) {
+    alert("Choose m between 10 and 5,000.");
+    return;
+  }
+
+  if (!Number.isFinite(p) || p < 0 || p > 1) {
+    alert("Choose p between 0 and 1.");
+    return;
+  }
+
+  $("runButton").disabled = true;
+  $("runStatus").textContent = "Generating independent trajectories...";
+
+  // Defer work briefly so the status can render.
+  setTimeout(() => {
+    try {
+      const bernoulli = generateModel(n, m, "bernoulli", p);
+      const rademacher = generateModel(n, m, "rademacher", p);
+
+      lastResults = { n, m, p, bernoulli, rademacher };
+
+      renderModel("bernoulli", bernoulli, n, p, quantity);
+      renderModel("rademacher", rademacher, n, p, quantity);
+      renderComparison(n, p, bernoulli, rademacher);
+
+      $("runStatus").textContent =
+        `Completed: ${m.toLocaleString()} trajectories per model, ` +
+        `${n.toLocaleString()} steps per trajectory.`;
+    } catch (error) {
+      console.error(error);
+      $("runStatus").textContent =
+        "Simulation failed: " + error.message;
+    } finally {
+      $("runButton").disabled = false;
+    }
+  }, 20);
+}
+
+function resetParameters() {
+  $("n").value = 200;
+  $("m").value = 500;
+  $("p").value = 0.5;
+  $("quantity").value = "total";
+  runSimulation();
+}
+
+$("quantity").addEventListener("change", () => {
+  if (!lastResults) return;
+
+  const { n, p, bernoulli, rademacher } = lastResults;
+  const quantity = $("quantity").value;
+
+  renderModel("bernoulli", bernoulli, n, p, quantity);
+  renderModel("rademacher", rademacher, n, p, quantity);
+});
+
+// Redraw charts on resize without generating new random samples.
+window.addEventListener("resize", () => {
+  if (!lastResults) return;
+
+  const { n, p, bernoulli, rademacher } = lastResults;
+  const quantity = $("quantity").value;
+
+  renderModel("bernoulli", bernoulli, n, p, quantity);
+  renderModel("rademacher", rademacher, n, p, quantity);
+});
+
+runSimulation();
+</script>
+
+</body>
+</html>
