@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welford's Online Algorithm</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        max-width: 950px;
+        margin: 40px auto;
+        padding: 20px;
+        line-height: 1.6;
+        background: #eaf1f7;
+        color: #263b50;
+    }
+
+    h1, h2, h3 {
+        color: #174a70;
+    }
+
+    .interpretation-step {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-radius: 8px;
+        background: white;
+        border: 1px solid #dce3e9;
+    }
+
+    .formula {
+        background: #edf3f8;
+        padding: 12px;
+        border-radius: 6px;
+        text-align: center;
+        font-family: "Times New Roman", serif;
+        font-size: 1.15rem;
+        margin: 12px 0;
+        overflow-x: auto;
+    }
+
+    code {
+        background: #edf3f8;
+        padding: 3px 6px;
+        border-radius: 4px;
+    }
+
+    pre {
+        background: #172b3a;
+        color: #e8f1f7;
+        padding: 18px;
+        border-radius: 8px;
+        overflow-x: auto;
+    }
+
+    input, button {
+        padding: 9px;
+        font-size: 1rem;
+        margin: 5px 3px;
+    }
+
+    button {
+        background: #1769aa;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #0e4f83;
+    }
+
+    .result {
+        font-weight: bold;
+        color: #1769aa;
+    }
+
+    .muted {
+        color: #607d8b;
+        font-size: 0.9rem;
+    }
+</style>
+</head>
+
+<body>
+
+<h1><u>Ex.1</u> Welford's Online Algorithm</h1>
+
+<p>
+    Welford's algorithm computes the mean and variance of a sequence
+    incrementally, without storing all previous observations.
+    It is based on the same recurrence approach used by Knuth
+    for the online computation of the mean.
+</p>
+
+<div class="interpretation-step">
+    <h2>Recurrence for the Mean</h2>
+
+    Suppose we have already processed n observations:
+    x₁, x₂, ..., xₙ.
+
+    Their mean is:
+
+    <div class="formula">
+        μₙ = (x₁ + x₂ + ... + xₙ) / n
+    </div>
+
+    When a new observation xₙ₊₁ arrives, the new mean is:
+
+    <div class="formula">
+        μₙ₊₁ = μₙ + (xₙ₊₁ - μₙ) / (n + 1)
+    </div>
+
+    Define the difference:
+
+    <div class="formula">
+        δ = xₙ₊₁ - μₙ
+    </div>
+
+    Then:
+
+    <div class="formula">
+        μₙ₊₁ = μₙ + δ / (n + 1)
+    </div>
+</div>
+
+<div class="interpretation-step">
+    <h2>Derivation of the Sum of Squares (SS)</h2>
+
+    Define the sum of squared deviations from the current mean:
+
+    <div class="formula">
+        SSₙ = Σᵢ₌₁ⁿ (xᵢ - μₙ)²
+    </div>
+
+    After adding a new observation, we have:
+
+    <div class="formula">
+        SSₙ₊₁ = Σᵢ₌₁ⁿ⁺¹ (xᵢ - μₙ₊₁)²
+    </div>
+
+    Separate the previous observations from the new one:
+
+    <div class="formula">
+        SSₙ₊₁ =
+        Σᵢ₌₁ⁿ (xᵢ - μₙ₊₁)²
+        + (xₙ₊₁ - μₙ₊₁)²
+    </div>
+
+    Since:
+
+    <div class="formula">
+        xᵢ - μₙ₊₁ = (xᵢ - μₙ) - (μₙ₊₁ - μₙ)
+    </div>
+
+    Expanding the square and using:
+
+    <div class="formula">
+        Σᵢ₌₁ⁿ (xᵢ - μₙ) = 0
+    </div>
+
+    gives:
+
+    <div class="formula">
+        SSₙ₊₁ =
+        SSₙ + n(μₙ₊₁ - μₙ)²
+        + (xₙ₊₁ - μₙ₊₁)²
+    </div>
+
+    Substituting the mean recurrence:
+
+    <div class="formula">
+        μₙ₊₁ - μₙ = δ/(n+1)
+    </div>
+
+    and:
+
+    <div class="formula">
+        xₙ₊₁ - μₙ₊₁ = nδ/(n+1)
+    </div>
+
+    we obtain:
+
+    <div class="formula">
+        SSₙ₊₁ = SSₙ + δ² n/(n+1)
+    </div>
+
+    Equivalently, since δ = xₙ₊₁ - μₙ:
+
+    <div class="formula">
+        <strong>SSₙ₊₁ = SSₙ + δ(xₙ₊₁ - μₙ₊₁)</strong>
+    </div>
+</div>
+
+<div class="interpretation-step">
+    <h2>Derivation of the Variance</h2>
+
+    The population variance of the n observations is:
+
+    <div class="formula">
+        σ²ₙ = SSₙ / n
+    </div>
+
+    The unbiased sample variance is:
+
+    <div class="formula">
+        s²ₙ = SSₙ / (n - 1), &nbsp; n &gt; 1
+    </div>
+
+    Therefore, once SS is updated, variance can be calculated
+    directly without storing the observations.
+
+    <p>
+        The distinction is important: dividing by n gives the
+        population variance of the observed dataset, while dividing
+        by n - 1 gives the usual unbiased sample variance estimator.
+    </p>
+</div>
+
+
+<div class="interpretation-step code-section">
+    <h2>Welford's Algorithm — Implementation</h2>
+
+    <p>
+        The recurrence can be implemented with just three core
+        update operations, maintaining only the count, mean, and
+        sum of squared deviations.
+    </p>
+
+    <div class="code-card">
+        <div class="code-header">
+            <span>Welford's recurrence</span>
+            <button class="copy-button" onclick="copyWelfordCode()">
+                Copy code
+            </button>
+        </div>
+
+        <pre><code id="welfordCode"><span class="code-comment">// Update the running statistics</span>
+count++;
+
+<span class="code-keyword">const</span> delta = x - mean;
+mean += delta / count;
+SS += delta * (x - mean);</code></pre>
+    </div>
+
+    <p>After processing all observations, calculate the variance:</p>
+
+    <div class="code-card">
+        <div class="code-header">
+            <span>Variance calculation</span>
+        </div>
+
+        <pre><code><span class="code-keyword">const</span> populationVariance = SS / count;
+<span class="code-keyword">const</span> sampleVariance =
+    count > 1 ? SS / (count - 1) : <span class="code-number">NaN</span>;</code></pre>
+    </div>
+
+    <p class="muted">
+        <strong>Complexity:</strong> O(1) time per observation and
+        O(1) additional memory. No previous observations need to
+        be stored.
+    </p>
+</div>
+
+<style>
+.code-card {
+    background: #17212b !important;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 15px 0;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+}
+
+.code-card pre {
+    display: block;
+    margin: 0 !important;
+    padding: 18px !important;
+    background: #17212b !important;
+    color: #e6edf3 !important;
+    opacity: 1 !important;
+    filter: none !important;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    overflow-x: auto;
+}
+
+.code-card pre code {
+    display: block;
+    background: transparent !important;
+    color: #e6edf3 !important;
+    opacity: 1 !important;
+    filter: none !important;
+    padding: 0 !important;
+    text-shadow: none !important;
+}
+
+.code-section {
+    margin-bottom: 1rem;
+}
+
+.code-card {
+    background: #17212b;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 15px 0;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+}
+
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: #263746;
+    color: #dce6ee;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.code-card pre {
+    margin: 0;
+    padding: 18px;
+    background: transparent;
+    color: #e6edf3;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    overflow-x: auto;
+}
+
+.code-keyword {
+    color: #c792ea;
+}
+
+.code-comment {
+    color: #8296a8;
+    font-style: italic;
+}
+
+.code-number {
+    color: #f78c6c;
+}
+
+.copy-button {
+    padding: 6px 12px;
+    margin: 0;
+    border: 1px solid #526779;
+    border-radius: 5px;
+    background: #34495e;
+    color: white;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.copy-button:hover {
+    background: #45627c;
+}
+
+.sampling-spacer {
+    margin-top: 65px;
+    padding-top: 35px;
+    border-top: 2px solid #d5e1ec;
+}
+
+#sampling-section h2 {
+    color: #29445c;
+    margin-bottom: 20px;
+}
+
+#sampling-section h3 {
+    color: #3b617f;
+    margin-top: 30px;
+    margin-bottom: 12px;
+}
+
+#sampling-section p {
+    line-height: 1.7;
+}
+
+.sampling-theory {
+    background: #f0f5fa;
+    border-left: 4px solid #6b9bbf;
+    padding: 18px 22px;
+    margin: 20px 0;
+    border-radius: 6px;
+}
+
+.sampling-equation {
+    background: #dce8f3;
+    color: #29445c;
+    padding: 13px;
+    border-radius: 7px;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.sampling-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: end;
+    padding: 20px;
+    background: #f0f5fa;
+    border-radius: 10px;
+}
+
+.sampling-controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: #29445c;
+    font-weight: bold;
+}
+
+.sampling-controls input {
+    width: 120px;
+    padding: 9px;
+    border: 1px solid #b8cadb;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+.sampling-controls button,
+#sampling-section > button {
+    padding: 10px 18px;
+    background: #3b6f96;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.sampling-controls button:hover,
+#sampling-section > button:hover {
+    background: #294f70;
+}
+
+.sampling-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.sampling-result {
+    background: #f0f5fa;
+    border: 1px solid #d5e1ec;
+    border-radius: 9px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sampling-result span {
+    color: #526b80;
+    font-size: 0.9rem;
+}
+
+.sampling-result strong {
+    color: #29445c;
+    font-size: 1.6rem;
+}
+
+.sampling-result small {
+    color: #71869a;
+}
+
+.sampling-interpretation,
+.sampling-conclusions {
+    background: #f0f5fa;
+    border-left: 4px solid #6b9bbf;
+    padding: 18px 22px;
+    margin: 20px 0;
+    border-radius: 5px;
+    line-height: 1.7;
+}
+
+.sampling-table-wrapper {
+    overflow-x: auto;
+    margin: 20px 0;
+}
+
+.sampling-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #f7fafd;
+    text-align: center;
+}
+
+.sampling-table th {
+    background: #dce8f3;
+    color: #29445c;
+    padding: 12px;
+}
+
+.sampling-table td {
+    padding: 11px;
+    border-bottom: 1px solid #d5e1ec;
+    color: #354f66;
+}
+
+.sampling-table tr:hover td {
+    background: #eaf1f7;
+}
+
+#sampling-section {
+    background: transparent;
+    color: inherit;
+}
+
+#sampling-section .sampling-theory,
+#sampling-section .sampling-controls,
+#sampling-section .sampling-result,
+#sampling-section .sampling-interpretation,
+#sampling-section .sampling-conclusions,
+#sampling-section .sampling-table {
+    background-color: #ffffff !important;
+    color: #263b50;
+}
+
+/* Keep table headers slightly different */
+#sampling-section .sampling-table th {
+    background-color: #f0f0f0 !important;
+    color: #29445c;
+}
+
+/* White background for table cells */
+#sampling-section .sampling-table td {
+    background-color: #ffffff !important;
+    color: #354f66;
+}
+
+#sampling-section h2 {
+    font-size: 2rem !important;
+    font-weight: bold;
+}
+
+#sampling-section h3 {
+    font-size: 1.5rem !important;
+    font-weight: bold;
+}
+</style>
+
+<script>
+function copyWelfordCode() {
+    const code = `count++;
+const delta = x - mean;
+mean += delta / count;
+SS += delta * (x - mean);`;
+
+    navigator.clipboard.writeText(code).then(() => {
+        const button = document.querySelector(".copy-button");
+        button.textContent = "Copied!";
+        setTimeout(() => button.textContent = "Copy code", 1500);
+    });
+}
+
+function generateSamplingResults(m, n) {
+    const means = [];
+    const variances = [];
+
+    let sumMeans = 0;
+    let sumVariances = 0;
+
+    for (let hacker = 0; hacker < m; hacker++) {
+        let count = 0;
+        let mean = 0;
+        let SS = 0;
+
+        for (let system = 0; system < n; system++) {
+            // Generate a score uniformly between 0 and 10
+            const x = Math.floor(Math.random() * 11);
+
+            // Welford's recurrence
+            count++;
+            const delta = x - mean;
+            mean += delta / count;
+            SS += delta * (x - mean);
+        }
+
+        const variance = SS / (n - 1);
+
+        means.push(mean);
+        variances.push(variance);
+
+        sumMeans += mean;
+        sumVariances += variance;
+    }
+
+    const averageMean = sumMeans / m;
+    const averageVariance = sumVariances / m;
+
+    // Standard deviations across hackers
+    const sdMean = Math.sqrt(
+        means.reduce(
+            (sum, x) => sum + (x - averageMean) ** 2, 0
+        ) / m
+    );
+
+    const sdVariance = Math.sqrt(
+        variances.reduce(
+            (sum, x) => sum + (x - averageVariance) ** 2, 0
+        ) / m
+    );
+
+    return {
+        averageMean,
+        averageVariance,
+        sdMean,
+        sdVariance
+    };
+}
+
+
+function runSamplingSimulation() {
+    const m = Number(document.getElementById("samplingM").value);
+    const n = Number(document.getElementById("samplingN").value);
+
+    if (!Number.isInteger(m) || m < 1 ||
+        !Number.isInteger(n) || n < 2) {
+        alert("Please enter m >= 1 and n >= 2.");
+        return;
+    }
+
+    const result = generateSamplingResults(m, n);
+
+    document.getElementById("averageSamplingMean").textContent =
+        result.averageMean.toFixed(4);
+
+    document.getElementById("averageSamplingVariance").textContent =
+        result.averageVariance.toFixed(4);
+
+    document.getElementById("sdSamplingMean").textContent =
+        result.sdMean.toFixed(4);
+
+    document.getElementById("sdSamplingVariance").textContent =
+        result.sdVariance.toFixed(4);
+
+    document.getElementById("samplingInterpretation").innerHTML = `
+        <strong>Interpretation (n = ${n}, m = ${m})</strong>
+
+        <p>
+            The average sampling mean is
+            ${result.averageMean.toFixed(4)}, compared with
+            the theoretical mean of 5.
+        </p>
+
+        <p>
+            The average sampling variance is
+            ${result.averageVariance.toFixed(4)}, compared with
+            the theoretical variance of 10.
+        </p>
+
+        <p>
+            The standard deviation of sampling means is
+            ${result.sdMean.toFixed(4)}, while the standard
+            deviation of sampling variances is
+            ${result.sdVariance.toFixed(4)}.
+            These values measure the variability of the estimates
+            between hackers.
+        </p>
+    `;
+}
+
+
+function runSamplingComparison() {
+    const m = Number(document.getElementById("samplingM").value);
+
+    if (!Number.isInteger(m) || m < 1) {
+        alert("Please enter a valid number of hackers (m >= 1).");
+        return;
+    }
+
+    const sampleSizes = [5, 10, 20, 50, 100, 200, 500];
+
+    const tbody = document.getElementById("samplingComparisonBody");
+    tbody.innerHTML = "";
+
+    sampleSizes.forEach(n => {
+        const result = generateSamplingResults(m, n);
+        const row = document.createElement("tr");
+
+        [
+            n,
+            result.averageMean.toFixed(4),
+            result.averageVariance.toFixed(4),
+            result.sdMean.toFixed(4),
+            result.sdVariance.toFixed(4)
+        ].forEach(value => {
+            const cell = document.createElement("td");
+            cell.textContent = value;
+            row.appendChild(cell);
+        });
+
+        tbody.appendChild(row);
+    });
+}
+</script>
+
+<div class="interpretation-step">
+    <h2>Interactive Example</h2>
+
+    <p>
+        Insert observations one at a time and observe how the mean,
+        sum of squares, and variance are updated.
+    </p>
+
+    <input type="number" id="valueInput" placeholder="Enter a number" step="any">
+    <button onclick="addValue()">Add observation</button>
+    <button onclick="resetData()">Reset</button>
+
+    <p>Observations: <span id="observations">None</span></p>
+
+    <ul>
+        <li>Count: <span class="result" id="count">0</span></li>
+        <li>Mean: <span class="result" id="mean">0</span></li>
+        <li>Sum of squares (SS): <span class="result" id="ss">0</span></li>
+        <li>Population variance: <span class="result" id="populationVariance">N/A</span></li>
+        <li>Sample variance: <span class="result" id="sampleVariance">N/A</span></li>
+    </ul>
+</div>
+
+<script>
+let count = 0;
+let mean = 0;
+let SS = 0;
+let observations = [];
+
+function addValue() {
+    const input = document.getElementById("valueInput");
+    const x = Number(input.value);
+
+    if (input.value.trim() === "" || !Number.isFinite(x)) {
+        alert("Please enter a valid number.");
+        return;
+    }
+
+    observations.push(x);
+
+    // Welford's recurrence
+    count++;
+    const delta = x - mean;
+    mean += delta / count;
+    SS += delta * (x - mean);
+
+    updateDisplay();
+    input.value = "";
+    input.focus();
+}
+
+function updateDisplay() {
+    document.getElementById("observations").textContent =
+        observations.join(", ");
+
+    document.getElementById("count").textContent = count;
+    document.getElementById("mean").textContent = mean.toFixed(6);
+    document.getElementById("ss").textContent = SS.toFixed(6);
+
+    document.getElementById("populationVariance").textContent =
+        (SS / count).toFixed(6);
+
+    document.getElementById("sampleVariance").textContent =
+        count > 1 ? (SS / (count - 1)).toFixed(6) : "N/A";
+}
+
+function resetData() {
+    count = 0;
+    mean = 0;
+    SS = 0;
+    observations = [];
+
+    document.getElementById("valueInput").value = "";
+    document.getElementById("observations").textContent = "None";
+    document.getElementById("count").textContent = "0";
+    document.getElementById("mean").textContent = "0";
+    document.getElementById("ss").textContent = "0";
+    document.getElementById("populationVariance").textContent = "N/A";
+    document.getElementById("sampleVariance").textContent = "N/A";
+}
+</script>
+
+<section id="sampling-section">
+
+    <div class="sampling-spacer"></div>
+
+    <h2><u>Ex.2</u> Mean and Variance</h2>
+
+    <p>
+        We extend the previous experiment by assigning a score between
+        0 and 10 to every penetration attempt. Scores are independently
+        generated according to a discrete uniform probability distribution.
+    </p>
+
+    <div class="sampling-theory">
+        <h3>Theoretical distribution</h3>
+        <p>
+            Each score X follows a discrete uniform distribution:
+        </p>
+        <p class="sampling-equation">
+            P(X = k) = 1/11, &nbsp; k ∈ {0, 1, ..., 10}
+        </p>
+        <p>
+            The theoretical mean and variance are:
+        </p>
+        <p class="sampling-equation">
+            μ = 5 &nbsp;&nbsp;&nbsp; σ² = 10
+        </p>
+    </div>
+
+    <h3>Simulation parameters</h3>
+
+    <p>
+        Each of the m hackers attempts to penetrate n systems.
+        Every hacker therefore obtains a sample of n scores.
+    </p>
+
+    <div class="sampling-controls">
+        <label>
+            Number of hackers (m):
+            <input type="number" id="samplingM" value="1000" min="1">
+        </label>
+
+        <label>
+            Number of systems (n):
+            <input type="number" id="samplingN" value="30" min="2">
+        </label>
+
+        <button onclick="runSamplingSimulation()">
+            Run simulation
+        </button>
+    </div>
+
+    <h3>Results</h3>
+
+    <p>
+        For each hacker, we calculate the sample mean and unbiased
+        sample variance using Welford's recurrence formulas.
+        Then we average these estimates across all hackers.
+    </p>
+
+    <div class="sampling-results">
+        <div class="sampling-result">
+            <span>Average sampling mean</span>
+            <strong id="averageSamplingMean">—</strong>
+            <small>Theoretical mean: 5</small>
+        </div>
+
+        <div class="sampling-result">
+            <span>Average sampling variance</span>
+            <strong id="averageSamplingVariance">—</strong>
+            <small>Theoretical variance: 10</small>
+        </div>
+
+        <div class="sampling-result">
+            <span>SD of sampling means</span>
+            <strong id="sdSamplingMean">—</strong>
+            <small>Variability between hackers</small>
+        </div>
+
+        <div class="sampling-result">
+            <span>SD of sampling variances</span>
+            <strong id="sdSamplingVariance">—</strong>
+            <small>Variability between hackers</small>
+        </div>
+    </div>
+
+    <div id="samplingInterpretation" class="sampling-interpretation">
+        Run the simulation to see the results.
+    </div>
+
+    <h3>Effect of the sample size</h3>
+
+    <p>
+        We now repeat the experiment using different values of n.
+        This allows us to observe how the number of systems attempted
+        by each hacker affects the estimates.
+    </p>
+
+    <button onclick="runSamplingComparison()">
+        Compare different values of n
+    </button>
+
+    <div class="sampling-table-wrapper">
+        <table class="sampling-table">
+            <thead>
+                <tr>
+                    <th>n</th>
+                    <th>Average mean</th>
+                    <th>Average variance</th>
+                    <th>SD of means</th>
+                    <th>SD of variances</th>
+                </tr>
+            </thead>
+            <tbody id="samplingComparisonBody">
+                <tr>
+                    <td colspan="5">Run the comparison to see the results.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Conclusions</h3>
+
+<div class="sampling-conclusions">
+
+    <p>
+        <strong>1. Convergence of the sampling mean</strong>
+    </p>
+
+    <p>
+        The first important observation is that the average of the sampling
+        means calculated across all hackers tends to approach the theoretical
+        mean of the probability distribution, μ = 5.
+        Each hacker obtains a different sample of scores, so their individual
+        sampling means will generally be different. However, when we consider
+        a sufficiently large number of hackers, these differences tend to
+        balance out.
+    </p>
+
+    <p>
+        This behavior is explained by the Law of Large Numbers: as the number
+        of independent observations increases, the sample mean becomes a
+        more reliable estimate of the population mean. In our experiment,
+        increasing m makes the average of the hackers' sampling means more
+        stable, while increasing n makes each individual hacker's estimate
+        more accurate.
+    </p>
+
+    <p>
+        <strong>2. Convergence of the sampling variance</strong>
+    </p>
+
+    <p>
+        A similar behavior can be observed for the sampling variance.
+        The average of the variances calculated by the hackers tends to
+        approach the theoretical variance σ² = 10.
+        This indicates that the sample variance can be used to estimate
+        the variability of the underlying probability distribution.
+    </p>
+
+    <p>
+        An important detail is that we calculate each sample variance
+        using n − 1 rather than n as the denominator. This correction
+        is known as Bessel's correction and makes the sample variance
+        an unbiased estimator of the population variance.
+        If we divided by n instead, the estimates would systematically
+        underestimate the theoretical variance.
+    </p>
+
+    <p>
+        <strong>3. Effect of increasing the number of systems</strong>
+    </p>
+
+    <p>
+        When we increase n, each hacker collects more observations.
+        Consequently, their sampling mean and sampling variance become
+        less sensitive to individual random scores.
+        This can be observed in the simulation by looking at the standard
+        deviations of the sampling means and sampling variances across
+        hackers.
+    </p>
+
+    <p>
+        In particular, the standard deviation of the sampling means
+        decreases proportionally to 1/√n. This means that doubling the
+        number of systems does not halve the variability of the sampling
+        means; instead, it reduces it by a factor of √2.
+    </p>
+
+    <p>
+        The sampling variances also become more concentrated around
+        the theoretical variance as n increases. Therefore, larger
+        samples provide more consistent estimates of both the mean
+        and the variance.
+    </p>
+
+    <p>
+        <strong>4. Importance in inferential statistics</strong>
+    </p>
+
+    <p>
+        These experiments illustrate two fundamental ideas in inferential
+        statistics: estimation and uncertainty.
+        In practical situations, the true probability distribution of a
+        population is usually unknown. We cannot observe every possible
+        outcome, so we collect a sample and use statistics calculated
+        from that sample to estimate unknown population parameters.
+    </p>
+
+    <p>
+        The sampling mean provides an estimate of the population mean,
+        while the sampling variance provides an estimate of the population
+        variance. By repeating the experiment with different samples,
+        we can study how much these estimates vary and how reliable
+        they are likely to be.
+    </p>
+
+    <p>
+        This is particularly important when constructing confidence
+        intervals and performing hypothesis tests. These procedures
+        depend on understanding the sampling distributions of estimators
+        and how their uncertainty changes with the sample size.
+    </p>
+
+    <p>
+        <strong>5. Role of Welford's algorithm</strong>
+    </p>
+
+    <p>
+        Finally, Welford's recurrence formulas allow us to calculate
+        the sample mean and variance incrementally, without storing
+        all the observations or repeatedly processing the entire sample.
+        This is particularly useful when dealing with large datasets
+        or continuous streams of observations.
+    </p>
+
+    <p>
+        Moreover, Welford's algorithm is numerically stable because
+        it avoids directly subtracting two potentially large quantities,
+        as happens in some traditional variance formulas.
+        Therefore, it is an efficient and reliable method for computing
+        statistical estimates in simulations and real-world applications.
+    </p>
+
+    <p>
+        <strong>Overall conclusion</strong>
+    </p>
+
+    <p>
+        The simulation confirms that sample statistics are useful
+        estimators of population parameters. Increasing the number
+        of hackers improves the stability of the averages across
+        independent experiments, while increasing the number of systems
+        attempted by each hacker reduces the variability of the individual
+        estimates. Together, these observations demonstrate why collecting
+        sufficiently large samples is essential for drawing reliable
+        statistical conclusions.
+    </p>
+
+</div>
+
+</section>
+</body>
+</html>
+
