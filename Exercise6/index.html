@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contingency Tables and Chi-Square Test</title>
+
+<script>
+window.MathJax = {
+    tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']]
+    }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 35px 20px;
+    background: #eaf1f7;
+    color: #263b50;
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.65;
+}
+
+.container {
+    max-width: 1100px;
+    margin: auto;
+}
+
+h1, h2, h3 {
+    color: #29445c;
+}
+
+h1 {
+    font-size: 2.3rem;
+    margin-bottom: 12px;
+}
+
+h2 {
+    font-size: 2rem;
+    margin-top: 42px;
+    margin-bottom: 18px;
+}
+
+h3 {
+    font-size: 1.4rem;
+    margin-top: 25px;
+}
+
+p {
+    margin: 12px 0;
+}
+
+.intro {
+    font-size: 1.08rem;
+    color: #50677c;
+}
+
+.card {
+    background: #ffffff;
+    border: 1px solid #d5e1ec;
+    border-radius: 12px;
+    padding: 25px;
+    margin: 25px 0;
+    box-shadow: 0 3px 10px rgba(38, 59, 80, 0.045);
+}
+
+.formula-box {
+    background: #ffffff;
+    border: 1px solid #d5e1ec;
+    border-left: 4px solid #3b617f;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    overflow-x: auto;
+    box-shadow: 0 2px 6px rgba(38, 59, 80, 0.04);
+}
+
+.formula-title {
+    color: #29445c;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+
+textarea {
+    width: 100%;
+    min-height: 190px;
+    resize: vertical;
+    padding: 15px;
+    border: 1px solid #cbd8e4;
+    border-radius: 8px;
+    background: #fbfdff;
+    color: #263b50;
+    font-family: Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+textarea:focus {
+    outline: 2px solid #8daac3;
+    border-color: #3b617f;
+}
+
+button {
+    background: #29445c;
+    color: white;
+    border: none;
+    padding: 12px 22px;
+    margin-top: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+    transition: background 0.2s, transform 0.2s;
+}
+
+button:hover {
+    background: #3b617f;
+    transform: translateY(-2px);
+}
+
+.secondary-button {
+    background: #647f98;
+    margin-left: 8px;
+}
+
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin: 15px 0 25px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 14px;
+    text-align: center;
+}
+
+th, td {
+    padding: 11px 13px;
+    border: 1px solid #d5e1ec;
+    white-space: nowrap;
+}
+
+th {
+    background: #eaf1f7;
+    color: #29445c;
+}
+
+tr:last-child {
+    font-weight: bold;
+}
+
+.result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.metric {
+    background: #f5f8fb;
+    border: 1px solid #d5e1ec;
+    border-radius: 9px;
+    padding: 17px;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: #647b90;
+}
+
+.metric-value {
+    font-size: 1.55rem;
+    font-weight: bold;
+    color: #29445c;
+    margin-top: 5px;
+    overflow-wrap: anywhere;
+}
+
+.status {
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 18px;
+    background: #f1f5f9;
+    border: 1px solid #d5e1ec;
+}
+
+.warning {
+    background: #fff8e8;
+    border-color: #e9d5a3;
+}
+
+.error {
+    background: #fff0ef;
+    border-color: #e4b6b1;
+}
+
+.note {
+    font-size: 0.92rem;
+    color: #647b90;
+}
+
+pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: #f5f8fb;
+    border: 1px solid #d5e1ec;
+    padding: 15px;
+    border-radius: 8px;
+    color: #29445c;
+}
+
+footer {
+    text-align: center;
+    color: #71869a;
+    margin: 45px 0 15px;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+@media(max-width: 600px) {
+    body {
+        padding: 20px 12px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    h2 {
+        font-size: 1.6rem;
+    }
+
+    .card {
+        padding: 17px;
+    }
+
+    .secondary-button {
+        margin-left: 0;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+    <h1>Contingency Tables and Chi-Square Test</h1>
+    <p class="intro">
+        Analysis of bivariate categorical data, marginal and
+        conditional frequencies, statistical independence,
+        and the Chi-square test.
+    </p>
+</header>
+
+<section>
+<h2>Contingency Tables</h2>
+
+<p>
+A bivariate dataset contains observations of two variables,
+X and F. When both variables are categorical, their joint
+distribution can be represented by a contingency table.
+</p>
+
+<p>
+Each cell contains the observed frequency O<sub>ij</sub>,
+which counts the observations belonging to category i of X
+and category j of F.
+</p>
+
+<div class="formula-box">
+    <div class="formula-title">Total Sample Size</div>
+    \[
+        n=\sum_{i=1}^{r}\sum_{j=1}^{c}O_{ij}
+    \]
+</div>
+</section>
+
+<section>
+<h2>Marginal and Conditional Frequencies</h2>
+
+<p>
+Marginal frequencies describe the distribution of each
+variable independently of the other.
+</p>
+
+<div class="formula-box">
+    <div class="formula-title">Marginal Absolute Frequencies</div>
+    \[
+        n_{i\cdot}=\sum_{j=1}^{c}O_{ij},
+        \qquad
+        n_{\cdot j}=\sum_{i=1}^{r}O_{ij}
+    \]
+</div>
+
+<div class="formula-box">
+    <div class="formula-title">Marginal Relative Frequencies</div>
+    \[
+        f_{i\cdot}=\frac{n_{i\cdot}}{n},
+        \qquad
+        f_{\cdot j}=\frac{n_{\cdot j}}{n}
+    \]
+</div>
+
+<p>
+Conditional frequencies describe the distribution of one
+variable when the category of the other variable is known.
+</p>
+
+<div class="formula-box">
+    <div class="formula-title">Conditional Relative Frequencies</div>
+    \[
+        f_{j|i}=\frac{O_{ij}}{n_{i\cdot}},
+        \qquad
+        f_{i|j}=\frac{O_{ij}}{n_{\cdot j}}
+    \]
+</div>
+</section>
+
+<section>
+<h2>Statistical Independence</h2>
+
+<p>
+Two random variables X and F are independent if knowing the
+value of one does not change the probability distribution
+of the other.
+</p>
+
+<div class="formula-box">
+    <div class="formula-title">Definition of Independence</div>
+    \[
+        P(X=x_i,F=f_j)
+        =
+        P(X=x_i)P(F=f_j)
+    \]
+</div>
+
+<p>
+Equivalently, when the conditioning event has positive
+probability:
+</p>
+
+<div class="formula-box">
+    \[
+        P(F=f_j\mid X=x_i)=P(F=f_j)
+    \]
+</div>
+
+<p>
+If the variables are independent, the joint probability
+distribution is completely determined by their marginal
+distributions.
+</p>
+</section>
+
+<section>
+<h2>Expected Frequencies under Independence</h2>
+
+<p>
+If the two variables are independent, the expected frequency
+of a cell is calculated using the corresponding row and
+column totals.
+</p>
+
+<div class="formula-box">
+    <div class="formula-title">Expected Frequency</div>
+    \[
+        E_{ij}=
+        \frac{n_{i\cdot}n_{\cdot j}}{n}
+    \]
+</div>
+
+<p>
+These values describe the frequencies that would be expected
+if the independence hypothesis were true.
+</p>
+</section>
+
+<section>
+<h2>Chi-Square Test of Independence</h2>
+
+<p>
+The Chi-square test compares observed frequencies with
+expected frequencies under the assumption of independence.
+</p>
+
+<div class="formula-box">
+    <div class="formula-title">Chi-Square Statistic</div>
+    \[
+        \chi^2=
+        \sum_{i=1}^{r}\sum_{j=1}^{c}
+        \frac{(O_{ij}-E_{ij})^2}{E_{ij}}
+    \]
+</div>
+
+<div class="formula-box">
+    <div class="formula-title">Degrees of Freedom</div>
+    \[
+        df=(r-1)(c-1)
+    \]
+</div>
+
+<p>
+The hypotheses are:
+</p>
+
+<ul>
+    <li><strong>H₀:</strong> X and F are statistically independent.</li>
+    <li><strong>H₁:</strong> X and F are statistically dependent.</li>
+</ul>
+
+<p>
+We use a significance level of α = 0.05. If the p-value is
+smaller than α, we reject the null hypothesis.
+</p>
+</section>
+
+<section>
+<h2>Interactive Statistical Analysis</h2>
+
+<div class="card">
+    <h3>Enter a Bivariate Dataset</h3>
+
+    <p>
+        Enter one observation per line. Separate the values
+        of X and F using a comma.
+    </p>
+
+    <p><strong>Example:</strong></p>
+
+    <pre>Gender,Preference
+Male,Sport
+Female,Music
+Male,Music
+Female,Sport
+Male,Sport
+Female,Music
+Male,Sport
+Female,Music
+Male,Music
+Female,Sport
+Male,Sport
+Female,Music</pre>
+
+    <textarea id="dataset" spellcheck="false">Gender,Preference
+Male,Sport
+Female,Music
+Male,Music
+Female,Sport
+Male,Sport
+Female,Music
+Male,Sport
+Female,Music
+Male,Music
+Female,Sport
+Male,Sport
+Female,Music</textarea>
+
+    <p class="note">
+        The first line is treated as a header if it contains
+        two values. You can also paste data without a header.
+        Each row must contain exactly two non-empty values.
+    </p>
+
+    <button onclick="analyzeDataset()">Analyze Dataset</button>
+    <button class="secondary-button" onclick="loadExample()">
+        Load Example
+    </button>
+
+    <div id="inputError" aria-live="polite"></div>
+</div>
+
+<div id="analysisResults" style="display:none;">
+
+    <div class="card">
+        <h3>Dataset Summary</h3>
+        <div id="summary" class="result-grid"></div>
+    </div>
+
+    <div class="card">
+        <h3>Observed Contingency Table</h3>
+        <div id="observedTable" class="table-wrapper"></div>
+    </div>
+
+    <div class="card">
+        <h3>Marginal Frequencies</h3>
+        <div id="marginalTable" class="table-wrapper"></div>
+    </div>
+
+    <div class="card">
+        <h3>Conditional Frequencies</h3>
+
+        <h4>Distribution of F given X</h4>
+        <div id="conditionalRows" class="table-wrapper"></div>
+
+        <h4>Distribution of X given F</h4>
+        <div id="conditionalColumns" class="table-wrapper"></div>
+    </div>
+
+    <div class="card">
+        <h3>Expected Frequencies under Independence</h3>
+        <div id="expectedTable" class="table-wrapper"></div>
+    </div>
+
+    <div class="card">
+        <h3>Chi-Square Test Results</h3>
+        <div id="testMetrics" class="result-grid"></div>
+        <div id="testInterpretation" class="status" aria-live="polite"></div>
+        <div id="assumptions" class="status"></div>
+    </div>
+
+    <div class="card">
+        <h3>Conclusions</h3>
+        <div id="conclusions"></div>
+    </div>
+</div>
+</section>
+
+
+<footer>
+    Statistical Analysis of Bivariate Data
+</footer>
+
+</div>
+
+<script>
+// -----------------------------------------------------
+// Utility: HTML escaping
+// -----------------------------------------------------
+
+function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+function formatNumber(value, digits = 4) {
+    if (!Number.isFinite(value)) return "Not available";
+    return value.toFixed(digits);
+}
+
+function makeTable(headers, rows) {
+    let html = "<table><thead><tr>";
+
+    headers.forEach(header => {
+        html += `<th>${escapeHTML(header)}</th>`;
+    });
+
+    html += "</tr></thead><tbody>";
+
+    rows.forEach(row => {
+        html += "<tr>";
+
+        row.forEach(cell => {
+            html += `<td>${cell}</td>`;
+        });
+
+        html += "</tr>";
+    });
+
+    html += "</tbody></table>";
+    return html;
+}
+
+// -----------------------------------------------------
+// Parse dataset
+// -----------------------------------------------------
+
+function parseDataset(raw) {
+    const lines = raw
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    if (lines.length < 2) {
+        throw new Error("Enter at least two observations.");
+    }
+
+    const parsed = lines.map((line, index) => {
+        const values = line.split(",").map(value => value.trim());
+
+        if (values.length !== 2 || !values[0] || !values[1]) {
+            throw new Error(
+                `Invalid row ${index + 1}. Use exactly two non-empty comma-separated values.`
+            );
+        }
+
+        return values;
+    });
+
+    // Treat the first row as a header when it is not
+    // a pair of values already repeated in the dataset.
+    const first = parsed[0];
+    const remaining = parsed.slice(1);
+
+    const isHeader = !remaining.some(row =>
+        row[0] === first[0] && row[1] === first[1]
+    );
+
+    return {
+        observations: isHeader ? remaining : parsed,
+        labels: isHeader ? first : ["X", "F"]
+    };
+}
+
+// -----------------------------------------------------
+// Incomplete gamma function
+// Used to calculate the Chi-square p-value.
+// -----------------------------------------------------
+
+function logGamma(z) {
+    const coefficients = [
+        676.5203681218851,
+        -1259.1392167224028,
+        771.3234287776531,
+        -176.6150291621406,
+        12.507343278686905,
+        -0.13857109526572012,
+        9.984369578019572e-6,
+        1.5056327351493116e-7
+    ];
+
+    if (z < 0.5) {
+        return Math.log(Math.PI) -
+            Math.log(Math.sin(Math.PI * z)) -
+            logGamma(1 - z);
+    }
+
+    z -= 1;
+
+    let x = 0.9999999999998099;
+
+    coefficients.forEach((coefficient, i) => {
+        x += coefficient / (z + i + 1);
+    });
+
+    const t = z + coefficients.length - 0.5;
+
+    return 0.5 * Math.log(2 * Math.PI) +
+        (z + 0.5) * Math.log(t) -
+        t + Math.log(x);
+}
+
+// Regularized lower incomplete gamma P(a,x)
+function gammaP(a, x) {
+    if (x <= 0) return 0;
+
+    const ITMAX = 10000;
+    const EPS = 1e-14;
+
+    if (x >= a + 1) {
+        return 1 - gammaQ(a, x);
+    }
+
+    let sum = 1 / a;
+    let term = sum;
+    let ap = a;
+
+    for (let n = 1; n <= ITMAX; n++) {
+        ap++;
+        term *= x / ap;
+        sum += term;
+
+        if (Math.abs(term) < Math.abs(sum) * EPS) break;
+    }
+
+    return Math.min(1, Math.max(0,
+        sum * Math.exp(-x + a * Math.log(x) - logGamma(a))
+    ));
+}
+
+// Regularized upper incomplete gamma Q(a,x)
+function gammaQ(a, x) {
+    if (x <= 0) return 1;
+
+    const ITMAX = 10000;
+    const EPS = 1e-14;
+    const FPMIN = 1e-300;
+
+    if (x < a + 1) {
+        return 1 - gammaP(a, x);
+    }
+
+    let b = x + 1 - a;
+    let c = 1 / FPMIN;
+    let d = 1 / b;
+    let h = d;
+
+    for (let i = 1; i <= ITMAX; i++) {
+        const an = -i * (i - a);
+        b += 2;
+
+        d = an * d + b;
+        if (Math.abs(d) < FPMIN) d = FPMIN;
+
+        c = b + an / c;
+        if (Math.abs(c) < FPMIN) c = FPMIN;
+
+        d = 1 / d;
+
+        const delta = d * c;
+        h *= delta;
+
+        if (Math.abs(delta - 1) < EPS) break;
+    }
+
+    return Math.min(1, Math.max(0,
+        Math.exp(-x + a * Math.log(x) - logGamma(a)) * h
+    ));
+}
+
+// -----------------------------------------------------
+// Main analysis
+// -----------------------------------------------------
+
+function analyzeDataset() {
+    const errorBox = document.getElementById("inputError");
+    errorBox.innerHTML = "";
+
+    try {
+        const raw = document.getElementById("dataset").value;
+        const parsed = parseDataset(raw);
+
+        const observations = parsed.observations;
+        const [labelX, labelF] = parsed.labels;
+
+        const xCategories = [...new Set(observations.map(row => row[0]))];
+        const fCategories = [...new Set(observations.map(row => row[1]))];
+
+        const r = xCategories.length;
+        const c = fCategories.length;
+        const n = observations.length;
+
+        if (r < 2 || c < 2) {
+            throw new Error(
+                "The Chi-square test requires at least two categories for each variable."
+            );
+        }
+
+        // Construct observed contingency table.
+        const observed = Array.from(
+            { length: r },
+            () => Array(c).fill(0)
+        );
+
+        observations.forEach(([x, f]) => {
+            const i = xCategories.indexOf(x);
+            const j = fCategories.indexOf(f);
+            observed[i][j]++;
+        });
+
+        // Marginal totals.
+        const rowTotals = observed.map(row =>
+            row.reduce((sum, value) => sum + value, 0)
+        );
+
+        const colTotals = fCategories.map((_, j) =>
+            observed.reduce((sum, row) => sum + row[j], 0)
+        );
+
+        // Expected frequencies.
+        const expected = observed.map((row, i) =>
+            row.map((_, j) =>
+                rowTotals[i] * colTotals[j] / n
+            )
+        );
+
+        // Chi-square statistic.
+        let chiSquare = 0;
+
+        for (let i = 0; i < r; i++) {
+            for (let j = 0; j < c; j++) {
+                const E = expected[i][j];
+
+                if (E <= 0) {
+                    throw new Error(
+                        "A zero expected frequency was encountered. Check the dataset."
+                    );
+                }
+
+                chiSquare +=
+                    Math.pow(observed[i][j] - E, 2) / E;
+            }
+        }
+
+        const degreesOfFreedom = (r - 1) * (c - 1);
+        const pValue = gammaQ(degreesOfFreedom / 2, chiSquare / 2);
+        const alpha = 0.05;
+        const reject = pValue < alpha;
+
+        // Expected-frequency diagnostics.
+        const expectedValues = expected.flat();
+        const minimumExpected = Math.min(...expectedValues);
+        const cellsBelow5 = expectedValues.filter(value => value < 5).length;
+        const proportionBelow5 = cellsBelow5 / expectedValues.length;
+
+        // Cramer's V effect size.
+        const cramersV = Math.sqrt(
+            chiSquare / (n * Math.min(r - 1, c - 1))
+        );
+
+        renderResults({
+            observations, xCategories, fCategories,
+            observed, expected, rowTotals, colTotals,
+            n, r, c, labelX, labelF,
+            chiSquare, degreesOfFreedom, pValue,
+            reject, minimumExpected, cellsBelow5,
+            proportionBelow5, cramersV, alpha
+        });
+
+    } catch (error) {
+        errorBox.innerHTML =
+            `<div class="status error">${escapeHTML(error.message)}</div>`;
+
+        document.getElementById("analysisResults").style.display = "none";
+    }
+}
+
+// -----------------------------------------------------
+// Render all results
+// -----------------------------------------------------
+
+function renderResults(data) {
+    const {
+        xCategories, fCategories, observed, expected,
+        rowTotals, colTotals, n, r, c, labelX, labelF,
+        chiSquare, degreesOfFreedom, pValue,
+        reject, minimumExpected, cellsBelow5,
+        proportionBelow5, cramersV
+    } = data;
+
+    document.getElementById("analysisResults").style.display = "block";
+
+    // Summary
+    document.getElementById("summary").innerHTML = `
+        <div class="metric">
+            <div class="metric-label">Observations</div>
+            <div class="metric-value">${n}</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Categories of ${escapeHTML(labelX)}</div>
+            <div class="metric-value">${r}</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Categories of ${escapeHTML(labelF)}</div>
+            <div class="metric-value">${c}</div>
+        </div>
+    `;
+
+    // Observed table
+    const observedRows = observed.map((row, i) => [
+        escapeHTML(xCategories[i]),
+        ...row.map(value => value),
+        rowTotals[i]
+    ]);
+
+    observedRows.push([
+        "Total",
+        ...colTotals,
+        n
+    ]);
+
+    document.getElementById("observedTable").innerHTML =
+        makeTable(
+            [escapeHTML(labelX), ...fCategories.map(escapeHTML), "Total"],
+            observedRows
+        );
+
+    // Marginal frequencies
+    const marginalRows = xCategories.map((category, i) => [
+        escapeHTML(category),
+        rowTotals[i],
+        (rowTotals[i] / n * 100).toFixed(2) + "%"
+    ]);
+
+    marginalRows.push([
+        "Total",
+        n,
+        "100.00%"
+    ]);
+
+    const marginalColumns = fCategories.map((category, j) => [
+        escapeHTML(category),
+        colTotals[j],
+        (colTotals[j] / n * 100).toFixed(2) + "%"
+    ]);
+
+    marginalColumns.push([
+        "Total",
+        n,
+        "100.00%"
+    ]);
+
+    document.getElementById("marginalTable").innerHTML =
+        `<h4>Marginal distribution of ${escapeHTML(labelX)}</h4>` +
+        makeTable(
+            [escapeHTML(labelX), "Absolute frequency", "Relative frequency"],
+            marginalRows
+        ) +
+        `<h4>Marginal distribution of ${escapeHTML(labelF)}</h4>` +
+        makeTable(
+            [escapeHTML(labelF), "Absolute frequency", "Relative frequency"],
+            marginalColumns
+        );
+
+    // Conditional frequencies of F given X.
+    const conditionalRows = xCategories.map((category, i) => [
+        escapeHTML(category),
+        ...observed[i].map(value =>
+            (value / rowTotals[i] * 100).toFixed(2) + "%"
+        )
+    ]);
+
+    document.getElementById("conditionalRows").innerHTML =
+        makeTable(
+            [escapeHTML(labelX), ...fCategories.map(escapeHTML)],
+            conditionalRows
+        );
+
+    // Conditional frequencies of X given F.
+    const conditionalColumns = fCategories.map((category, j) => [
+        escapeHTML(category),
+        ...xCategories.map((_, i) =>
+            (observed[i][j] / colTotals[j] * 100).toFixed(2) + "%"
+        )
+    ]);
+
+    document.getElementById("conditionalColumns").innerHTML =
+        makeTable(
+            [escapeHTML(labelF), ...xCategories.map(escapeHTML)],
+            conditionalColumns
+        );
+
+    // Expected frequencies.
+    const expectedRows = expected.map((row, i) => [
+        escapeHTML(xCategories[i]),
+        ...row.map(value => formatNumber(value, 3)),
+        formatNumber(rowTotals[i], 0)
+    ]);
+
+    expectedRows.push([
+        "Total",
+        ...colTotals,
+        n
+    ]);
+
+    document.getElementById("expectedTable").innerHTML =
+        makeTable(
+            [escapeHTML(labelX), ...fCategories.map(escapeHTML), "Total"],
+            expectedRows
+        );
+
+    // Test metrics.
+    document.getElementById("testMetrics").innerHTML = `
+        <div class="metric">
+            <div class="metric-label">Chi-square statistic</div>
+            <div class="metric-value">${formatNumber(chiSquare, 5)}</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Degrees of freedom</div>
+            <div class="metric-value">${degreesOfFreedom}</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">p-value</div>
+            <div class="metric-value">${pValue.toExponential(5)}</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Cramer's V</div>
+            <div class="metric-value">${formatNumber(cramersV, 4)}</div>
+        </div>
+    `;
+
+    // Interpretation.
+    document.getElementById("testInterpretation").innerHTML = reject
+        ? `<strong>Statistically significant association.</strong>
+           <p>Since the p-value (${pValue.toExponential(4)})
+           is smaller than 0.05, we reject the null hypothesis
+           of independence. The data provide evidence of an
+           association between the two variables.</p>`
+        : `<strong>No statistically significant association detected.</strong>
+           <p>Since the p-value (${pValue.toExponential(4)})
+           is greater than or equal to 0.05, we do not reject
+           the null hypothesis. The sample does not provide
+           sufficient evidence of an association.</p>`;
+
+    // Expected-frequency assumptions.
+    const assumptionBox = document.getElementById("assumptions");
+
+    if (minimumExpected < 1 || proportionBelow5 > 0.20) {
+        assumptionBox.className = "status warning";
+        assumptionBox.innerHTML =
+            `<strong>Warning: expected frequencies may be too small.</strong>
+             <p>Minimum expected frequency: ${formatNumber(minimumExpected, 3)}.
+             Cells with expected frequency below 5: ${cellsBelow5}
+             out of ${r * c} (${(proportionBelow5 * 100).toFixed(1)}%).</p>
+             <p>The usual Chi-square approximation may be unreliable.
+             Consider collecting more observations, combining categories
+             only when substantively justified, or using an appropriate
+             exact test.</p>`;
+    } else {
+        assumptionBox.className = "status";
+        assumptionBox.innerHTML =
+            `<strong>Expected-frequency check.</strong>
+             <p>Minimum expected frequency: ${formatNumber(minimumExpected, 3)}.
+             Cells below 5: ${cellsBelow5} out of ${r * c}.</p>
+             <p>The common guideline that no more than 20% of expected
+             counts should be below 5, and none below 1, is satisfied.
+             This supports using the Chi-square approximation, subject
+             to the other test assumptions.</p>`;
+    }
+
+    // Conclusions.
+    // Detailed conclusions
+    const associationText = reject
+        ? `The p-value is below the significance level of 0.05.
+           Therefore, the null hypothesis of independence is rejected.
+           The sample provides statistically significant evidence
+           of an association between ${labelX} and ${labelF}.`
+        : `The p-value is greater than or equal to 0.05.
+           Therefore, the null hypothesis of independence cannot
+           be rejected. The available sample does not provide
+           sufficient evidence of an association between
+           ${labelX} and ${labelF}. This does not prove that
+           the variables are independent.`;
+
+    const effectText =
+        cramersV < 0.1 ? "very weak" :
+        cramersV < 0.3 ? "weak" :
+        cramersV < 0.5 ? "moderate" : "strong";
+
+    document.getElementById("conclusions").innerHTML = `
+        <h4>1. Analysis of the observed data</h4>
+        <p>
+            The dataset contains ${n} observations, with
+            ${r} categories for ${escapeHTML(labelX)} and
+            ${c} categories for ${escapeHTML(labelF)}.
+            The contingency table describes their joint
+            distribution, while the marginal and conditional
+            frequencies provide information about their
+            individual and conditional distributions.
+        </p>
+
+        <h4>2. Chi-square test interpretation</h4>
+        <p>
+            The calculated Chi-square statistic is
+            <strong>${formatNumber(chiSquare, 5)}</strong>,
+            with <strong>${degreesOfFreedom}</strong> degrees
+            of freedom. The corresponding p-value is
+            <strong>${pValue.toExponential(5)}</strong>.
+        </p>
+        <p>${associationText}</p>
+
+        <h4>3. Strength of the association</h4>
+        <p>
+            Cramer's V is
+            <strong>${formatNumber(cramersV, 4)}</strong>.
+            Based on a rough descriptive guideline, this
+            indicates a ${effectText} association.
+            This effect-size measure complements the p-value:
+            statistical significance and practical importance
+            are not the same thing.
+        </p>
+
+        <h4>4. Reliability of the test</h4>
+        <p>
+            The minimum expected frequency is
+            <strong>${formatNumber(minimumExpected, 3)}</strong>.
+            There are ${cellsBelow5} cells out of ${r * c}
+            with expected frequencies below 5.
+            The expected-frequency conditions and the
+            independence of observations should be considered
+            before relying on the approximate Chi-square p-value.
+        </p>
+
+        <h4>5. Association does not imply causality</h4>
+        <p>
+            ${reject
+                ? "Although the analysis provides evidence of an association, it does not establish that one variable causes the other."
+                : "The absence of statistically significant evidence does not establish that the variables have no causal or other relationship."
+            }
+            Other variables, confounding factors, or the way
+            the data were collected may influence the observed
+            relationship. Additional investigation and an
+            appropriate research design are necessary to
+            establish causal effects.
+        </p>
+
+        <h4>6. Overall conclusion</h4>
+        <p>
+            The contingency table, marginal and conditional
+            frequencies, expected frequencies, Chi-square
+            statistic, and Cramer's V provide complementary
+            information about the relationship between the
+            two categorical variables. Their combined
+            interpretation gives a more complete statistical
+            description than relying on the Chi-square
+            statistic alone.
+        </p>
+    `;
+
+    // Re-typeset any mathematical content inserted dynamically.
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise();
+    }
+}
+
+// -----------------------------------------------------
+// Load example dataset
+// -----------------------------------------------------
+
+function loadExample() {
+    document.getElementById("dataset").value =
+`Gender,Preference
+Male,Sport
+Female,Music
+Male,Music
+Female,Sport
+Male,Sport
+Female,Music
+Male,Sport
+Female,Music
+Male,Music
+Female,Sport
+Male,Sport
+Female,Music`;
+
+    document.getElementById("inputError").innerHTML = "";
+}
+
+// Automatically analyze the initial example.
+analyzeDataset();
+</script>
+
+</body>
+</html>
+```
